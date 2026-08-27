@@ -61,10 +61,16 @@ const state = loadState();
 
 switch (command.toLowerCase()) {
   case 'elect': {
-    const newSupervisor = (targetAgent || 'gemini2').toLowerCase();
+    let newSupervisor = (targetAgent || '').toLowerCase();
     if (!state.nodes[newSupervisor]) {
-      console.error(`❌ Agente '${newSupervisor}' inválido!`);
-      process.exit(1);
+      // Auto-detect from current working directory
+      const cwd = process.cwd();
+      const match = cwd.match(/helios-(gemini\d|glm|claude)/i);
+      if (match && state.nodes[match[1].toLowerCase()]) {
+        newSupervisor = match[1].toLowerCase();
+      } else {
+        newSupervisor = state.active_supervisor || 'gemini3';
+      }
     }
 
     if (state.quarantine_pool.includes(newSupervisor)) {
