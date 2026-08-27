@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orca Live Preview — Multi-Agente (HELIOS)</title>
+  <style>
+    :root {
+      --bg-dark: #0c0e14;
+      --bg-surface: #141720;
+      --bg-surface-elevated: #1e2230;
+      --bg-card: #252b3d;
+      --border-color: #2b3247;
+      --border-highlight: #3f4a6e;
+      --text-primary: #e6edf3;
+      --text-secondary: #9aa5be;
+      --text-muted: #626e8c;
+      
+      --agent-gemini1: #38bdf8;
+      --agent-gemini1-bg: rgba(56, 189, 248, 0.12);
+      --agent-gemini2: #4ade80;
+      --agent-gemini2-bg: rgba(74, 222, 128, 0.12);
+      --agent-claude: #c084fc;
+      --agent-claude-bg: rgba(192, 132, 252, 0.12);
+      --agent-glm: #f59e0b;
+      --agent-glm-bg: rgba(245, 158, 11, 0.12);
+      --agent-all: #38bdf8;
+      
+      --accent-primary: #5865F2;
+      --accent-hover: #4752C4;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-main: 0 8px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Bar */
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.3px;
+      color: var(--text-primary);
+    }
+
+    .logo-icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0c0e14;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    /* Agent Navigation Tabs */
+    .agent-nav-tabs {
+      display: flex;
+      align-items: center;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .agent-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .agent-tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-surface-elevated);
+    }
+
+    .agent-tab.active {
+      background: var(--bg-surface-elevated);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .agent-tab.active[data-agent="all"] { border-bottom: 2px solid var(--agent-all); }
+    .agent-tab.active[data-agent="gemini1"] { border-bottom: 2px solid var(--agent-gemini1); color: var(--agent-gemini1); }
+    .agent-tab.active[data-agent="gemini2"] { border-bottom: 2px solid var(--agent-gemini2); color: var(--agent-gemini2); }
+    .agent-tab.active[data-agent="claude"] { border-bottom: 2px solid var(--agent-claude); color: var(--agent-claude); }
+    .agent-tab.active[data-agent="glm"] { border-bottom: 2px solid var(--agent-glm); color: var(--agent-glm); }
+
+    .agent-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-all { background: var(--agent-all); box-shadow: 0 0 6px var(--agent-all); }
+    .dot-gemini1 { background: var(--agent-gemini1); box-shadow: 0 0 6px var(--agent-gemini1); }
+    .dot-gemini2 { background: var(--agent-gemini2); box-shadow: 0 0 6px var(--agent-gemini2); }
+    .dot-claude { background: var(--agent-claude); box-shadow: 0 0 6px var(--agent-claude); }
+    .dot-glm { background: var(--agent-glm); box-shadow: 0 0 6px var(--agent-glm); }
+
+    /* Header Actions */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: var(--bg-card);
+      border-color: var(--border-highlight);
+      color: #fff;
+    }
+
+    .btn.active {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: #fff;
+    }
+
+    /* Multi-Agent Status Sub-Header (4 Agents) */
+    .agents-status-bar {
+      background: var(--bg-surface-elevated);
+      border-bottom: 1px solid var(--border-color);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 6px 16px;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .agent-status-card {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .agent-status-card.gemini1 { border-left: 3px solid var(--agent-gemini1); }
+    .agent-status-card.gemini2 { border-left: 3px solid var(--agent-gemini2); }
+    .agent-status-card.claude { border-left: 3px solid var(--agent-claude); }
+    .agent-status-card.glm { border-left: 3px solid var(--agent-glm); }
+
+    .agent-card-name {
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .name-gemini1 { color: var(--agent-gemini1); }
+    .name-gemini2 { color: var(--agent-gemini2); }
+    .name-claude { color: var(--agent-claude); }
+    .name-glm { color: var(--agent-glm); }
+
+    .agent-card-status {
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Main Container */
+    .main-layout {
+      flex: 1;
+      display: flex;
+      height: calc(100vh - 86px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Center Stage / Viewer */
+    .viewer-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(circle at center, #181d2a 0%, #0c0e14 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Floating Toolbar */
+    .floating-toolbar {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 23, 32, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 50;
+      box-shadow: var(--shadow-main);
+    }
+
+    .zoom-level {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 44px;
+      text-align: center;
+    }
+
+    .toolbar-divider {
+      width: 1px;
+      height: 18px;
+      background: var(--border-color);
+      margin: 0 2px;
+    }
+
+    /* Viewport Area */
+    .viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .viewport.grabbing {
+      cursor: grabbing;
+    }
+
+    .empty-state {
+      text-align: center;
+      max-width: 480px;
+      padding: 40px 20px;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.8;
+    }
+
+    .empty-state h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .image-wrapper {
+      position: absolute;
+      transform-origin: center center;
+      transition: transform 0.05s ease-out;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-img {
+      max-width: none;
+      max-height: none;
+      display: block;
+      box-shadow: var(--shadow-main);
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+    }
+
+    .pixel-art {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Bottom Info Card */
+    .bottom-info-card {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      background: rgba(20, 23, 32, 0.92);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      z-index: 50;
+      box-shadow: var(--shadow-main);
+    }
+
+    .info-details {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .info-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .agent-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .pill-gemini1 { background: var(--agent-gemini1-bg); color: var(--agent-gemini1); border: 1px solid var(--agent-gemini1); }
+    .pill-gemini2 { background: var(--agent-gemini2-bg); color: var(--agent-gemini2); border: 1px solid var(--agent-gemini2); }
+    .pill-claude { background: var(--agent-claude-bg); color: var(--agent-claude); border: 1px solid var(--agent-claude); }
+    .pill-glm { background: var(--agent-glm-bg); color: var(--agent-glm); border: 1px solid var(--agent-glm); }
+
+    .info-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .info-tag {
+      font-size: 11px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    .info-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .info-path {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .info-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* History Drawer */
+    .history-drawer {
+      width: 320px;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 80;
+    }
+
+    .history-drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drawer-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .history-card {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      display: flex;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .history-card:hover {
+      background: var(--bg-card);
+      border-color: var(--border-highlight);
+    }
+
+    .history-card.active {
+      border-color: var(--accent-primary);
+      background: var(--bg-card);
+    }
+
+    .history-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 4px;
+      object-fit: cover;
+      background: #000;
+      border: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .history-meta {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .history-meta-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-meta-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toast {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-highlight);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      box-shadow: var(--shadow-main);
+      transform: translateY(-20px);
+      opacity: 0;
+      transition: all 0.2s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header>
+    <div class="brand-section">
+      <div class="logo-badge">
+        <div class="logo-icon">▲</div>
+        <span>Orca Live Preview</span>
+      </div>
+    </div>
+
+    <!-- Agent Tabs Navigation -->
+    <div class="agent-nav-tabs">
+      <button class="agent-tab active" data-agent="all" id="tab-all">
+        <span class="agent-dot dot-all"></span>
+        <span>🌟 Todos</span>
+      </button>
+      <button class="agent-tab" data-agent="gemini1" id="tab-gemini1">
+        <span class="agent-dot dot-gemini1"></span>
+        <span>🔵 Gemini 1 (VFX)</span>
+      </button>
+      <button class="agent-tab" data-agent="gemini2" id="tab-gemini2">
+        <span class="agent-dot dot-gemini2"></span>
+        <span>🟢 Gemini 2 (UI/Sandbox)</span>
+      </button>
+      <button class="agent-tab" data-agent="claude" id="tab-claude">
+        <span class="agent-dot dot-claude"></span>
+        <span>🟣 Claude (Core)</span>
+      </button>
+      <button class="agent-tab" data-agent="glm" id="tab-glm">
+        <span class="agent-dot dot-glm"></span>
+        <span>🔶 GLM (Engine)</span>
+      </button>
+    </div>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <button class="btn btn-icon" id="btnTogglePixel" title="Alternar Modo Pixel Art [P]">
+        👾 Pixel Art
+      </button>
+      <button class="btn btn-icon" id="btnToggleDrawer" title="Histórico de Imagens">
+        📂 Histórico (<span id="historyCount">0</span>)
+      </button>
+      <button class="btn btn-icon" id="btnClearHistory" title="Limpar Histórico">
+        🗑️
+      </button>
+    </div>
+  </header>
+
+  <!-- 4-Agent Real-time Status Strip -->
+  <div class="agents-status-bar">
+    <div class="agent-status-card gemini1">
+      <span class="agent-card-name name-gemini1">Gemini 1:</span>
+      <span class="agent-card-status" id="status-text-gemini1">Pronto / Conectado</span>
+    </div>
+    <div class="agent-status-card gemini2">
+      <span class="agent-card-name name-gemini2">Gemini 2:</span>
+      <span class="agent-card-status" id="status-text-gemini2">Pronto / Conectado</span>
+    </div>
+    <div class="agent-status-card claude">
+      <span class="agent-card-name name-claude">Claude Code:</span>
+      <span class="agent-card-status" id="status-text-claude">Pronto / Conectado</span>
+    </div>
+    <div class="agent-status-card glm">
+      <span class="agent-card-name name-glm">GLM 5.2:</span>
+      <span class="agent-card-status" id="status-text-glm">Pronto / Conectado</span>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    
+    <!-- Center Viewer -->
+    <div class="viewer-container">
+      
+      <!-- Floating Toolbar -->
+      <div class="floating-toolbar">
+        <button class="btn btn-icon" id="btnZoomOut" title="Diminuir Zoom [-]">🔍 -</button>
+        <span class="zoom-level" id="zoomLevelText">100%</span>
+        <button class="btn btn-icon" id="btnZoomIn" title="Aumentar Zoom [+]">🔍 +</button>
+        <div class="toolbar-divider"></div>
+        <button class="btn btn-icon" id="btnResetZoom" title="Ajustar à Tela [0]">⤢ Ajustar</button>
+        <button class="btn btn-icon" id="btn100Percent" title="Tamanho Real (100%)">1:1</button>
+        <div class="toolbar-divider"></div>
+        <button class="btn btn-icon" id="btnToggleFullscreen" title="Tela Cheia [F]">⛶</button>
+      </div>
+
+      <!-- Viewport -->
+      <div class="viewport" id="viewport">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🖼️</div>
+          <h3 id="emptyTitle">Nenhum asset ou cena exibida</h3>
+          <p id="emptyDesc">Assim que qualquer um dos 3 agentes (Gemini 1, Gemini 2 ou Claude) iniciar um teste de cena ou gerar um sprite/shader, o preview aparecerá aqui em tempo real!</p>
+        </div>
+
+        <div class="image-wrapper" id="imageWrapper" style="display: none;">
+          <img src="" alt="Live Preview" class="preview-img pixel-art" id="mainImage">
+        </div>
+      </div>
+
+      <!-- Bottom Info Overlay -->
+      <div class="bottom-info-card" id="bottomInfoCard" style="display: none;">
+        <div class="info-details">
+          <div class="info-title-row">
+            <span class="agent-pill pill-gemini2" id="infoAgentPill">Gemini 2</span>
+            <span class="info-title" id="infoTitle">Nome do Asset / Cena</span>
+            <span class="info-tag" id="infoDimensions">0 x 0</span>
+          </div>
+          <div class="info-desc" id="infoDescription">Descrição da ação ou teste em andamento...</div>
+          <div class="info-path" id="infoPath">C:\...</div>
+        </div>
+        <div class="info-actions">
+          <button class="btn" id="btnOpenExplorer" title="Abrir pasta no Windows Explorer">📁 Abrir Pasta</button>
+          <button class="btn" id="btnCopyImage" title="Copiar imagem">📋 Copiar</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- History Drawer -->
+    <div class="history-drawer" id="historyDrawer">
+      <div class="drawer-header">
+        <span class="drawer-title">Histórico de Visualizações</span>
+        <button class="btn btn-icon" id="btnCloseDrawer">✕</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">Notificação</div>
+
+  <script>
+    let currentFilterAgent = 'all';
+    let currentImage = null;
+    let historyData = [];
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let isPixelArt = true;
+
+    // Elements
+    const viewport = document.getElementById('viewport');
+    const imageWrapper = document.getElementById('imageWrapper');
+    const mainImage = document.getElementById('mainImage');
+    const emptyState = document.getElementById('emptyState');
+    const bottomInfoCard = document.getElementById('bottomInfoCard');
+    const infoAgentPill = document.getElementById('infoAgentPill');
+    const infoTitle = document.getElementById('infoTitle');
+    const infoDimensions = document.getElementById('infoDimensions');
+    const infoDescription = document.getElementById('infoDescription');
+    const infoPath = document.getElementById('infoPath');
+    const zoomLevelText = document.getElementById('zoomLevelText');
+    const historyList = document.getElementById('historyList');
+    const historyDrawer = document.getElementById('historyDrawer');
+    const historyCount = document.getElementById('historyCount');
+    const toast = document.getElementById('toast');
+    const btnTogglePixel = document.getElementById('btnTogglePixel');
+
+    const statusGemini1 = document.getElementById('status-text-gemini1');
+    const statusGemini2 = document.getElementById('status-text-gemini2');
+    const statusClaude = document.getElementById('status-text-claude');
+    const statusGlm = document.getElementById('status-text-glm');
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function updateTransform() {
+      imageWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+      zoomLevelText.textContent = `${Math.round(scale * 100)}%`;
+    }
+
+    function fitToScreen() {
+      if (!mainImage.naturalWidth) return;
+      const vpRect = viewport.getBoundingClientRect();
+      const padX = 80;
+      const padY = 160;
+      const scaleX = (vpRect.width - padX) / mainImage.naturalWidth;
+      const scaleY = (vpRect.height - padY) / mainImage.naturalHeight;
+      scale = Math.min(scaleX, scaleY, 4); // Max 4x for pixel art
+      if (scale <= 0) scale = 1;
+      translateX = 0;
+      translateY = 0;
+      updateTransform();
+    }
+
+    function getAgentDisplayName(ag) {
+      if (ag === 'gemini1') return 'Gemini 1';
+      if (ag === 'gemini2') return 'Gemini 2';
+      if (ag === 'glm') return 'GLM 5.2';
+      return 'Claude';
+    }
+
+    function displayImage(item) {
+      if (!item || !item.url) return;
+      currentImage = item;
+
+      mainImage.src = item.url;
+      mainImage.onload = () => {
+        emptyState.style.display = 'none';
+        imageWrapper.style.display = 'flex';
+        bottomInfoCard.style.display = 'flex';
+
+        infoTitle.textContent = item.title;
+        infoDescription.textContent = item.description || (item.agentName + ' gerou este asset');
+        infoPath.textContent = item.filePath || '';
+        infoDimensions.textContent = `${mainImage.naturalWidth} × ${mainImage.naturalHeight} px`;
+
+        const ag = (item.agent || 'gemini2').toLowerCase();
+        infoAgentPill.className = `agent-pill pill-${ag}`;
+        infoAgentPill.textContent = getAgentDisplayName(ag);
+
+        fitToScreen();
+      };
+    }
+
+    function updateAgentStatus(agentData) {
+      if (!agentData) return;
+      if (agentData.gemini1 && statusGemini1) statusGemini1.textContent = agentData.gemini1.status;
+      if (agentData.gemini2 && statusGemini2) statusGemini2.textContent = agentData.gemini2.status;
+      if (agentData.claude && statusClaude) statusClaude.textContent = agentData.claude.status;
+      if (agentData.glm && statusGlm) statusGlm.textContent = agentData.glm.status;
+    }
+
+    function renderHistory() {
+      historyList.innerHTML = '';
+      const filtered = historyData.filter(item => {
+        if (currentFilterAgent === 'all') return true;
+        return (item.agent || '').toLowerCase() === currentFilterAgent;
+      });
+
+      historyCount.textContent = filtered.length;
+
+      filtered.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `history-card ${currentImage && currentImage.id === item.id ? 'active' : ''}`;
+        
+        const ag = (item.agent || 'gemini2').toLowerCase();
+        const agName = getAgentDisplayName(ag);
+
+        card.innerHTML = `
+          <img src="${item.url}" class="history-thumb pixel-art">
+          <div class="history-meta">
+            <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 2px;">
+              <span class="agent-pill pill-${ag}" style="font-size: 8px; padding: 1px 4px;">${agName}</span>
+              <span class="history-meta-title">${item.title}</span>
+            </div>
+            <div class="history-meta-desc">${item.description || new Date(item.timestamp).toLocaleTimeString()}</div>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          displayImage(item);
+          renderHistory();
+        });
+        historyList.appendChild(card);
+      });
+
+      // Update main viewer if filtered item doesn't match
+      if (currentImage && currentFilterAgent !== 'all' && (currentImage.agent || '').toLowerCase() !== currentFilterAgent) {
+        if (filtered.length > 0) {
+          displayImage(filtered[0]);
+        } else {
+          imageWrapper.style.display = 'none';
+          bottomInfoCard.style.display = 'none';
+          emptyState.style.display = 'block';
+        }
+      }
+    }
+
+    // Tabs Event Listeners
+    document.querySelectorAll('.agent-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.agent-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilterAgent = tab.dataset.agent;
+        renderHistory();
+        showToast(`Filtrando visualização: ${tab.textContent.trim()}`);
+      });
+    });
+
+    // SSE Connection
+    const eventSource = new EventSource('/events');
+
+    eventSource.addEventListener('init', (e) => {
+      const data = JSON.parse(e.data);
+      historyData = data.history || [];
+      if (data.agentStatus) updateAgentStatus(data.agentStatus);
+      if (historyData.length > 0) {
+        displayImage(historyData[0]);
+      }
+      renderHistory();
+    });
+
+    eventSource.addEventListener('show', (e) => {
+      const item = JSON.parse(e.data);
+      historyData.unshift(item);
+      if (currentFilterAgent === 'all' || (item.agent || '').toLowerCase() === currentFilterAgent) {
+        displayImage(item);
+      }
+      renderHistory();
+      showToast(`Novo asset de ${item.agentName || item.agent}: ${item.title}`);
+    });
+
+    eventSource.addEventListener('agent_status', (e) => {
+      const data = JSON.parse(e.data);
+      updateAgentStatus(data);
+    });
+
+    eventSource.addEventListener('status', (e) => {
+      const data = JSON.parse(e.data);
+      showToast(`⚡ ${data.text}`);
+    });
+
+    // Zoom & Pan
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.2 : 0.8;
+      scale = Math.max(0.1, Math.min(scale * zoomFactor, 30));
+      updateTransform();
+    });
+
+    viewport.addEventListener('mousedown', (e) => {
+      if (e.button === 0) {
+        isDragging = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+        viewport.classList.add('grabbing');
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      translateX = e.clientX - startX;
+      translateY = e.clientY - startY;
+      updateTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+      viewport.classList.remove('grabbing');
+    });
+
+    document.getElementById('btnZoomIn').onclick = () => { scale = Math.min(scale * 1.25, 30); updateTransform(); };
+    document.getElementById('btnZoomOut').onclick = () => { scale = Math.max(scale * 0.8, 0.1); updateTransform(); };
+    document.getElementById('btnResetZoom').onclick = fitToScreen;
+    document.getElementById('btn100Percent').onclick = () => { scale = 1; translateX = 0; translateY = 0; updateTransform(); };
+
+    document.getElementById('btnTogglePixel').onclick = () => {
+      isPixelArt = !isPixelArt;
+      mainImage.classList.toggle('pixel-art', isPixelArt);
+      btnTogglePixel.classList.toggle('active', isPixelArt);
+      showToast(isPixelArt ? 'Modo Pixel Art Ativado (Nítido)' : 'Modo Suave Ativado');
+    };
+
+    document.getElementById('btnToggleDrawer').onclick = () => historyDrawer.classList.toggle('open');
+    document.getElementById('btnCloseDrawer').onclick = () => historyDrawer.classList.remove('open');
+
+    document.getElementById('btnOpenExplorer').onclick = () => {
+      if (currentImage && currentImage.filePath) {
+        fetch('/api/open-in-explorer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filePath: currentImage.filePath })
+        });
+      }
+    };
+  </script>
+</body>
+</html>
