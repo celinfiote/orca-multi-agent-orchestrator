@@ -20,10 +20,14 @@
       --agent-gemini1-bg: rgba(56, 189, 248, 0.12);
       --agent-gemini2: #4ade80;
       --agent-gemini2-bg: rgba(74, 222, 128, 0.12);
+      --agent-gemini3: #f59e0b;
+      --agent-gemini3-bg: rgba(245, 158, 11, 0.12);
+      --agent-gemini4: #ec4899;
+      --agent-gemini4-bg: rgba(236, 72, 153, 0.12);
       --agent-claude: #c084fc;
       --agent-claude-bg: rgba(192, 132, 252, 0.12);
-      --agent-glm: #f59e0b;
-      --agent-glm-bg: rgba(245, 158, 11, 0.12);
+      --agent-glm: #f97316;
+      --agent-glm-bg: rgba(249, 115, 22, 0.12);
       --agent-all: #38bdf8;
       
       --accent-primary: #5865F2;
@@ -133,6 +137,8 @@
     .agent-tab.active[data-agent="all"] { border-bottom: 2px solid var(--agent-all); }
     .agent-tab.active[data-agent="gemini1"] { border-bottom: 2px solid var(--agent-gemini1); color: var(--agent-gemini1); }
     .agent-tab.active[data-agent="gemini2"] { border-bottom: 2px solid var(--agent-gemini2); color: var(--agent-gemini2); }
+    .agent-tab.active[data-agent="gemini3"] { border-bottom: 2px solid var(--agent-gemini3); color: var(--agent-gemini3); }
+    .agent-tab.active[data-agent="gemini4"] { border-bottom: 2px solid var(--agent-gemini4); color: var(--agent-gemini4); }
     .agent-tab.active[data-agent="claude"] { border-bottom: 2px solid var(--agent-claude); color: var(--agent-claude); }
     .agent-tab.active[data-agent="glm"] { border-bottom: 2px solid var(--agent-glm); color: var(--agent-glm); }
 
@@ -144,6 +150,8 @@
     .dot-all { background: var(--agent-all); box-shadow: 0 0 6px var(--agent-all); }
     .dot-gemini1 { background: var(--agent-gemini1); box-shadow: 0 0 6px var(--agent-gemini1); }
     .dot-gemini2 { background: var(--agent-gemini2); box-shadow: 0 0 6px var(--agent-gemini2); }
+    .dot-gemini3 { background: var(--agent-gemini3); box-shadow: 0 0 6px var(--agent-gemini3); }
+    .dot-gemini4 { background: var(--agent-gemini4); box-shadow: 0 0 6px var(--agent-gemini4); }
     .dot-claude { background: var(--agent-claude); box-shadow: 0 0 6px var(--agent-claude); }
     .dot-glm { background: var(--agent-glm); box-shadow: 0 0 6px var(--agent-glm); }
 
@@ -381,6 +389,8 @@
 
     .pill-gemini1 { background: var(--agent-gemini1-bg); color: var(--agent-gemini1); border: 1px solid var(--agent-gemini1); }
     .pill-gemini2 { background: var(--agent-gemini2-bg); color: var(--agent-gemini2); border: 1px solid var(--agent-gemini2); }
+    .pill-gemini3 { background: var(--agent-gemini3-bg); color: var(--agent-gemini3); border: 1px solid var(--agent-gemini3); }
+    .pill-gemini4 { background: var(--agent-gemini4-bg); color: var(--agent-gemini4); border: 1px solid var(--agent-gemini4); }
     .pill-claude { background: var(--agent-claude-bg); color: var(--agent-claude); border: 1px solid var(--agent-claude); }
     .pill-glm { background: var(--agent-glm-bg); color: var(--agent-glm); border: 1px solid var(--agent-glm); }
 
@@ -568,11 +578,15 @@
       </button>
       <button class="agent-tab" data-agent="gemini2" id="tab-gemini2">
         <span class="agent-dot dot-gemini2"></span>
-        <span>🟢 Gemini 2 (UI/Sandbox)</span>
+        <span>🟢 Gemini 2 (Supervisor)</span>
       </button>
-      <button class="agent-tab" data-agent="claude" id="tab-claude">
-        <span class="agent-dot dot-claude"></span>
-        <span>🟣 Claude (Core)</span>
+      <button class="agent-tab" data-agent="gemini3" id="tab-gemini3">
+        <span class="agent-dot dot-gemini3"></span>
+        <span>🟡 Gemini 3 (Worldgen)</span>
+      </button>
+      <button class="agent-tab" data-agent="gemini4" id="tab-gemini4">
+        <span class="agent-dot dot-gemini4"></span>
+        <span>🟣 Gemini 4 (NPC/Combate)</span>
       </button>
       <button class="agent-tab" data-agent="glm" id="tab-glm">
         <span class="agent-dot dot-glm"></span>
@@ -594,7 +608,7 @@
     </div>
   </header>
 
-  <!-- 4-Agent Real-time Status Strip -->
+  <!-- 5-Agent Real-time Status Strip -->
   <div class="agents-status-bar">
     <div class="agent-status-card gemini1">
       <span class="agent-card-name name-gemini1">Gemini 1:</span>
@@ -604,9 +618,13 @@
       <span class="agent-card-name name-gemini2">Gemini 2:</span>
       <span class="agent-card-status" id="status-text-gemini2">Pronto / Conectado</span>
     </div>
-    <div class="agent-status-card claude">
-      <span class="agent-card-name name-claude">Claude Code:</span>
-      <span class="agent-card-status" id="status-text-claude">Pronto / Conectado</span>
+    <div class="agent-status-card gemini3">
+      <span class="agent-card-name name-gemini3">Gemini 3:</span>
+      <span class="agent-card-status" id="status-text-gemini3">Pronto / Conectado</span>
+    </div>
+    <div class="agent-status-card gemini4">
+      <span class="agent-card-name name-gemini4">Gemini 4:</span>
+      <span class="agent-card-status" id="status-text-gemini4">Pronto / Conectado</span>
     </div>
     <div class="agent-status-card glm">
       <span class="agent-card-name name-glm">GLM 5.2:</span>
@@ -710,6 +728,8 @@
 
     const statusGemini1 = document.getElementById('status-text-gemini1');
     const statusGemini2 = document.getElementById('status-text-gemini2');
+    const statusGemini3 = document.getElementById('status-text-gemini3');
+    const statusGemini4 = document.getElementById('status-text-gemini4');
     const statusClaude = document.getElementById('status-text-claude');
     const statusGlm = document.getElementById('status-text-glm');
 
@@ -741,6 +761,8 @@
     function getAgentDisplayName(ag) {
       if (ag === 'gemini1') return 'Gemini 1';
       if (ag === 'gemini2') return 'Gemini 2';
+      if (ag === 'gemini3') return 'Gemini 3';
+      if (ag === 'gemini4') return 'Gemini 4';
       if (ag === 'glm') return 'GLM 5.2';
       return 'Claude';
     }
@@ -772,6 +794,8 @@
       if (!agentData) return;
       if (agentData.gemini1 && statusGemini1) statusGemini1.textContent = agentData.gemini1.status;
       if (agentData.gemini2 && statusGemini2) statusGemini2.textContent = agentData.gemini2.status;
+      if (agentData.gemini3 && statusGemini3) statusGemini3.textContent = agentData.gemini3.status;
+      if (agentData.gemini4 && statusGemini4) statusGemini4.textContent = agentData.gemini4.status;
       if (agentData.claude && statusClaude) statusClaude.textContent = agentData.claude.status;
       if (agentData.glm && statusGlm) statusGlm.textContent = agentData.glm.status;
     }

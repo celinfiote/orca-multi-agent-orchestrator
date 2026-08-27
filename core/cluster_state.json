@@ -1,0 +1,67 @@
+{
+  "active_supervisor": "gemini3",
+  "priority_queue": [
+    "gemini2",
+    "gemini1",
+    "gemini3",
+    "gemini4",
+    "glm"
+  ],
+  "active_pool": [
+    "gemini3",
+    "gemini4",
+    "glm"
+  ],
+  "quarantine_pool": [
+    "gemini1",
+    "gemini2"
+  ],
+  "last_failover": 1787871358800,
+  "nodes": {
+    "gemini2": {
+      "role": "worker",
+      "status": "TOKEN_EXHAUSTED",
+      "pool": "QUARANTINE",
+      "quarantine_until": 1787874958681,
+      "current_task": null,
+      "last_seen": 1787871358800,
+      "retries": 0
+    },
+    "gemini1": {
+      "role": "worker",
+      "status": "TOKEN_EXHAUSTED",
+      "pool": "QUARANTINE",
+      "quarantine_until": 1787874958561,
+      "current_task": null,
+      "last_seen": 1787871358800,
+      "retries": 0
+    },
+    "gemini3": {
+      "role": "supervisor",
+      "status": "ACTIVE",
+      "pool": "ACTIVE",
+      "quarantine_until": null,
+      "current_task": null,
+      "last_seen": 1787871358800,
+      "retries": 0
+    },
+    "gemini4": {
+      "role": "worker",
+      "status": "READY",
+      "pool": "ACTIVE",
+      "quarantine_until": null,
+      "current_task": null,
+      "last_seen": 1787871358800,
+      "retries": 0
+    },
+    "glm": {
+      "role": "worker",
+      "status": "READY",
+      "pool": "ACTIVE",
+      "quarantine_until": null,
+      "current_task": null,
+      "last_seen": 1787871358800,
+      "retries": 0
+    }
+  }
+}

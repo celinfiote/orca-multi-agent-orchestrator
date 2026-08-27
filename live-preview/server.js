@@ -12,14 +12,15 @@ const clients = new Set();
 let history = [];
 let agentStatus = {
   gemini1: { id: 'gemini1', name: 'Gemini 1 (VFX & Shaders)', status: 'Pronto / Conectado', details: 'Shaders 2D, Partículas, Iluminação', lastUpdate: Date.now() },
-  gemini2: { id: 'gemini2', name: 'Gemini 2 (UI & Sandbox)', status: 'Pronto / Conectado', details: 'UI/HUD, Sandbox Terra, Cenografia', lastUpdate: Date.now() },
-  claude:  { id: 'claude',  name: 'Claude Code (Core & Net)', status: 'Pronto / Conectado', details: 'Servidor, RPCs, Física, Worldgen', lastUpdate: Date.now() },
-  glm:     { id: 'glm',     name: 'GLM 5.2 (Engine & GDScript Core)', status: 'Pronto / Conectado', details: 'GDScript Core, Godot 4 Engine, Física Pesada', lastUpdate: Date.now() }
+  gemini2: { id: 'gemini2', name: 'Gemini 2 (Supervisor & Core)', status: 'Pronto / Conectado', details: 'Orquestração, Gameplay, UI/HUD, Net', lastUpdate: Date.now() },
+  gemini3: { id: 'gemini3', name: 'Gemini 3 (Worldgen & Biomas)', status: 'Pronto / Conectado', details: 'Worldgen, Biomas, Cavernas, Dungeons', lastUpdate: Date.now() },
+  gemini4: { id: 'gemini4', name: 'Gemini 4 (NPC AI & Combate)', status: 'Pronto / Conectado', details: 'IA de NPCs, FSM, Behavior Trees, Combate', lastUpdate: Date.now() },
+  glm:     { id: 'glm',     name: 'GLM 5.2 (Engine & GDScript Core)', status: 'Pronto / Conectado', details: 'GDScript Core, Funções Puras, Fórmulas', lastUpdate: Date.now() }
 };
 
 let currentStatus = {
   agent: 'global',
-  text: 'Orca Live Preview — 4 Agentes Conectados',
+  text: 'Orca Live Preview — 5 Agentes Conectados',
   timestamp: Date.now(),
   details: 'Aguardando ações dos agentes...'
 };
@@ -66,6 +67,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+function loadClusterState() {
+  const statePath = path.join('C:\\Users\\Usuario\\Documents\\helios-gemini3\\tools\\cluster_state.json');
+  if (fs.existsSync(statePath)) {
+    try {
+      return JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    } catch(e) {}
+  }
+  return null;
+}
+
   // SSE Stream Endpoint
   if (pathname === '/events') {
     res.writeHead(200, {
@@ -76,8 +87,9 @@ const server = http.createServer((req, res) => {
     res.write('\n');
     clients.add(res);
 
-    // Send initial snapshot with all agents and history
-    res.write(`event: init\ndata: ${JSON.stringify({ history, currentStatus, agentStatus })}\n\n`);
+    const clusterState = loadClusterState();
+    // Send initial snapshot with all agents, history and cluster quota state
+    res.write(`event: init\ndata: ${JSON.stringify({ history, currentStatus, agentStatus, clusterState })}\n\n`);
 
     req.on('close', () => {
       clients.delete(res);

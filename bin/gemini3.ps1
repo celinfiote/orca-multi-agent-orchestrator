@@ -1,10 +1,10 @@
 param([Parameter(ValueFromRemainingArguments=$true)]$rest)
 
-# Navega automaticamente para o worktree helios-gemini2
+# Navega automaticamente para o worktree helios-gemini3
 $currentPath = (Get-Location).Path
-if (-not ($currentPath -like "*helios-gemini2*")) {
-    if (Test-Path "C:\Users\Usuario\Documents\helios-gemini2") {
-        Set-Location "C:\Users\Usuario\Documents\helios-gemini2"
+if (-not ($currentPath -like "*helios-gemini3*")) {
+    if (Test-Path "C:\Users\Usuario\Documents\helios-gemini3") {
+        Set-Location "C:\Users\Usuario\Documents\helios-gemini3"
     }
 }
 
@@ -13,7 +13,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-public class CredManager2 {
+public class CredManager3 {
     [DllImport("advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool CredWrite([In] ref CREDENTIAL userCredential, int flags);
 
@@ -54,14 +54,14 @@ public class CredManager2 {
 }
 "@ -ErrorAction SilentlyContinue
 
-$tokenPath = "C:\ProgramData\agy\conta2_token.txt"
+$tokenPath = "C:\Users\Usuario\.gemini\conta3_token.txt"
 if (-not (Test-Path $tokenPath)) {
-    $tokenPath = "C:\Users\Usuario\.gemini\conta2_token.txt"
+    $tokenPath = "C:\ProgramData\agy\conta3_token.txt"
 }
 
 if (Test-Path $tokenPath) {
-    $token2 = [System.IO.File]::ReadAllText($tokenPath)
-    [CredManager2]::WriteGeneric("gemini:antigravity", "antigravity", $token2) | Out-Null
+    $token3 = [System.IO.File]::ReadAllText($tokenPath)
+    [CredManager3]::WriteGeneric("gemini:antigravity", "antigravity", $token3) | Out-Null
 }
 
 $hasContinueOrNew = $false

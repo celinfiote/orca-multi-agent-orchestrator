@@ -1,4 +1,12 @@
-﻿param([Parameter(ValueFromRemainingArguments=$true)]$rest)
+param([Parameter(ValueFromRemainingArguments=$true)]$rest)
+
+# Navega automaticamente para o worktree helios-gemini1
+$currentPath = (Get-Location).Path
+if (-not ($currentPath -like "*helios-gemini1*")) {
+    if (Test-Path "C:\Users\Usuario\Documents\helios-gemini1") {
+        Set-Location "C:\Users\Usuario\Documents\helios-gemini1"
+    }
+}
 
 Add-Type @"
 using System;
@@ -51,4 +59,16 @@ if (Test-Path "C:\Users\Usuario\.gemini\conta1_token.txt") {
     [CredManager1]::WriteGeneric("gemini:antigravity", "antigravity", $token1) | Out-Null
 }
 
-& "C:\Users\Usuario\AppData\Local\agy\bin\agy.exe" --dangerously-skip-permissions @rest
+$hasContinueOrNew = $false
+foreach ($arg in $rest) {
+    if ($arg -match "^(-c|--continue|--conversation|--new-project)$") {
+        $hasContinueOrNew = $true
+        break
+    }
+}
+
+if (-not $hasContinueOrNew) {
+    & "C:\Users\Usuario\AppData\Local\agy\bin\agy.exe" -c --dangerously-skip-permissions @rest
+} else {
+    & "C:\Users\Usuario\AppData\Local\agy\bin\agy.exe" --dangerously-skip-permissions @rest
+}

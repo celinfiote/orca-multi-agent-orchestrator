@@ -9,6 +9,8 @@ function detectAgentFromCwd() {
   const cwd = process.cwd().toLowerCase();
   if (cwd.includes('gemini1')) return 'gemini1';
   if (cwd.includes('gemini2')) return 'gemini2';
+  if (cwd.includes('gemini3')) return 'gemini3';
+  if (cwd.includes('gemini4')) return 'gemini4';
   if (cwd.includes('claude')) return 'claude';
   if (cwd.includes('glm')) return 'glm';
   return 'gemini2';
