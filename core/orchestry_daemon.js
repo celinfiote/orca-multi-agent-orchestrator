@@ -1,35 +1,34 @@
 /**
  * HELIOS — Daemon de Orquestração Contínua Multi-Agente (Supervisor Ativo da sessão)
- * Monitora Linear, terminais Orca e estado dos 6 agentes (Claude, Gemini 1-4, GLM 5.2).
+ * Monitora Linear, terminais Orca e estado de TODOS os agentes ativos (ver
+ * .agents/registry.json — o registro único, não uma lista hardcoded aqui).
  * Executa em loop contínuo (daemon mode), checando a cada 60s por tarefas concluídas,
  * realizando auto-merge no main e disparando o próximo lote de trabalho sem interrupções.
  *
- * CORREÇÃO (2026-08-28): 'claude' estava ausente de WORKTREES e do painel impresso —
- * o Claude Code (agente #1 de CLAUDE.md) era literalmente invisível pra este daemon.
+ * CORREÇÃO (2026-08-28, 2 rodadas): primeiro 'claude' estava ausente de WORKTREES e do
+ * painel (hardcoded, esquecido quando o time cresceu). Depois disso o WORKTREES ficou
+ * correto mas ainda hardcoded — agora deriva de .agents/registry.json, então um agente
+ * novo aparece aqui sozinho, sem editar este arquivo. Removido também TERMINALS (dead
+ * code: nunca era lido em lugar nenhum, e hardcodeava handles de terminal — que são UUIDs
+ * efêmeros por sessão do Orca, nunca estáveis o suficiente pra hardcode, ver
+ * .agents/rules/orchestry_protocol.md seção 2.4).
  */
 
 const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 const http = require('http');
+const { loadRegistry } = require('./agent_registry');
 
 const POLL_INTERVAL_MS = 60 * 1000; // 60 segundos
-const WORKTREES = {
-  claude: 'C:\\Users\\Usuario\\Documents\\helios-claude',
-  gemini2: 'C:\\Users\\Usuario\\Documents\\helios-gemini2',
-  gemini1: 'C:\\Users\\Usuario\\Documents\\helios-gemini1',
-  gemini3: 'C:\\Users\\Usuario\\Documents\\helios-gemini3',
-  gemini4: 'C:\\Users\\Usuario\\Documents\\helios-gemini4',
-  glm: 'C:\\Users\\Usuario\\Documents\\helios-glm',
-  mirror: 'C:\\Users\\Usuario\\Documents\\helios'
-};
 
-const TERMINALS = {
-  glm: 'term_065ea719-4ceb-410e-ac4d-b63880d21cf1',
-  gemini1: 'term_65cfe7f4-6dc9-41bf-81d0-290c9c86498e',
-  gemini3: 'term_2698278c-cf96-456c-88f4-74e6ce675b43',
-  gemini4: 'term_gemini4_default',
-  gemini2: 'term_10f4dc74-f2c3-4bf8-b84b-30b225a4a1b8'
-};
+function buildWorktrees() {
+  const map = { mirror: 'C:\\Users\\Usuario\\Documents\\helios' };
+  for (const agent of loadRegistry().agents) {
+    map[agent.id] = `C:\\Users\\Usuario\\Documents\\${agent.worktree}`;
+  }
+  return map;
+}
+const WORKTREES = buildWorktrees();
 
 function runCmd(cmd, cwd = WORKTREES.gemini2) {
   try {
@@ -87,47 +86,49 @@ async function runCycle(cycleNum) {
   console.log(`================================================================================`);
 
   // 1. Sincronização e Fetch do Git
-  console.log('📡 [1/5] Sincronizando repositório e branches dos 6 agentes...');
+  console.log('📡 [1/6] Sincronizando repositório e branches dos 6 agentes...');
   runCmd('git fetch origin');
 
   // 1.5. Sincroniza .agents/rules|skills -> ~/.gemini/rules|skills (achado real de
   // 2026-08-28: o Gemini CLI le config global, nao o .agents/ do projeto, e nada
   // sincronizava os dois - uma correcao em .agents/ ficava invisivel pros 4 agentes
   // Gemini ate alguem copiar manualmente. Roda a cada ciclo pra nunca mais dessincronizar.
-  console.log('🔄 [1.5/5] Sincronizando .agents/ -> ~/.gemini/ (config real do Gemini CLI)...');
+  console.log('🔄 [1.5/6] Sincronizando .agents/ -> ~/.gemini/ (config real do Gemini CLI)...');
   runCmd(`node "${__dirname}\\sync_gemini_config.js" "${WORKTREES.claude}"`);
+
+  // 1.75. Auditoria REAL de cota (achado de 2026-08-28: essa auditoria só existia hardcoded
+  // dentro do worktree do Gemini 3, então só rodava quando ELE lembrava de rodar. Lê o
+  // terminal de verdade de cada agente e atualiza cluster_state.json (o mesmo arquivo que
+  // o painel do Live Preview lê) — a cada ciclo, automaticamente, para qualquer supervisor.
+  console.log('🩺 [1.75/6] Auditoria real de cota (lê terminais ao vivo, detecta erro por regex)...');
+  runCmd(`node "${__dirname}\\cluster_manager.js" audit`);
 
   // 2. Leitura do Live Preview
   const previewData = await checkLivePreview();
   const agentsState = previewData?.agentStatuses || {};
 
-  console.log('\n📊 [2/5] Painel Consolidado de Status Multi-Agente:');
+  console.log('\n📊 [2/6] Painel Consolidado de Status Multi-Agente:');
   console.log('--------------------------------------------------------------------------------');
   console.log(' Agente      | Especialidade     | Status Atual                    | Tempo');
   console.log('-------------|-------------------|---------------------------------|------------');
 
-  const cl = agentsState.claude || { title: 'Idle / Aguardando', description: 'Pronto para backend e multiplayer' };
-  const g1 = agentsState.gemini1 || { title: 'Idle / Aguardando', description: 'Pronto para shaders e VFX' };
-  const g2 = agentsState.gemini2 || { title: 'Supervisor Ativo', description: 'Orquestrando tarefas e gameplay' };
-  const g3 = agentsState.gemini3 || { title: 'Idle / Aguardando', description: 'Pronto para worldgen e biomas' };
-  const g4 = agentsState.gemini4 || { title: 'Idle / Aguardando', description: 'Pronto para IA NPCs e combate' };
-  const glm = agentsState.glm || { title: 'Idle / Aguardando', description: 'Pronto para física pura' };
-
-  console.log(` 🔴 Claude   | Backend & Net     | ${cl.title.padEnd(31).slice(0, 31)} | ${cl.time || 'Agora'}`);
-  console.log(` 🔵 Gemini 1 | Shaders & VFX     | ${g1.title.padEnd(31).slice(0, 31)} | ${g1.time || 'Agora'}`);
-  console.log(` 🟡 Gemini 3 | Worldgen & Biomas | ${g3.title.padEnd(31).slice(0, 31)} | ${g3.time || 'Agora'}`);
-  console.log(` 🟣 Gemini 4 | IA NPCs & Combate | ${g4.title.padEnd(31).slice(0, 31)} | ${g4.time || 'Agora'}`);
-  console.log(` 🔶 GLM 5.2  | Funções Puras     | ${glm.title.padEnd(31).slice(0, 31)} | ${glm.time || 'Agora'}`);
-  console.log(` 🟢 Gemini 2 | UI, HUD & Net     | ${g2.title.padEnd(31).slice(0, 31)} | ${g2.time || 'Agora'}`);
+  // Deriva do registro único — qualquer agente novo aparece aqui automaticamente, sem
+  // precisar editar este arquivo (ver .agents/registry.json e agent_registry.js).
+  for (const agent of loadRegistry().agents) {
+    const state = agentsState[agent.id] || { title: 'Idle / Aguardando', description: `Pronto para ${agent.specialtyShort}` };
+    const nameCol = agent.name.padEnd(11).slice(0, 11);
+    const specCol = agent.specialtyShort.padEnd(17).slice(0, 17);
+    console.log(` ${agent.emoji} ${nameCol} | ${specCol} | ${state.title.padEnd(31).slice(0, 31)} | ${state.time || 'Agora'}`);
+  }
   console.log('--------------------------------------------------------------------------------');
 
   // 3. Verificação de Merges Pendentes no Main
-  console.log('\n🔗 [3/5] Verificando integridade e merge em main...');
+  console.log('\n🔗 [3/6] Verificando integridade e merge em main...');
   const mainLog = runCmd('git log -n 1 --oneline origin/main');
   console.log(`  Último commit em origin/main: ${mainLog}`);
 
   // 4. Conclusão do ciclo
-  console.log('\n✅ [5/5] Ciclo concluído. Próxima checagem em 60s.');
+  console.log('\n✅ [6/6] Ciclo concluído. Próxima checagem em 60s.');
   console.log('================================================================================\n');
 }
 

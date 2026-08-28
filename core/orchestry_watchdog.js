@@ -1,16 +1,19 @@
 /**
  * Watchdog de Orquestração Multi-Agente do HELIOS (Supervisor Ativo da sessão).
- * Monitora o status dos 6 agentes (Claude, Gemini 1-4, GLM 5.2) a cada 2 minutos,
- * detectando atrasos, travamentos por cota de tokens ou processos congelados. Também reporta
- * a disponibilidade real (não estimada) da Rede Híbrida — Groq/DeepSeek/ImageMagick/PixelLab —
- * que os 6 agentes devem acionar diretamente em vez de gastar cota de terminal.
+ * Monitora o status de TODOS os agentes ativos (ver .agents/registry.json) a cada 2
+ * minutos, detectando atrasos, travamentos por cota de tokens ou processos congelados.
+ * Também reporta a disponibilidade real (não estimada) da Rede Híbrida —
+ * Groq/DeepSeek/ImageMagick/PixelLab — que os agentes devem acionar diretamente em vez de
+ * gastar cota de terminal.
  *
- * CORREÇÃO (2026-08-28): 'claude' estava ausente da lista de agentes monitorados — o
- * Claude Code (agente #1 de CLAUDE.md) era literalmente invisível pra este watchdog.
+ * CORREÇÃO (2026-08-28, 2 rodadas): primeiro 'claude' estava ausente da lista de agentes
+ * monitorados (hardcoded, esquecido quando o time cresceu). Agora deriva de
+ * .agents/registry.json — um agente novo aparece aqui sozinho, sem editar este arquivo.
  */
 
 const http = require('http');
 const { execSync } = require('child_process');
+const { loadRegistry } = require('./agent_registry');
 
 const SERVER_HOST = '127.0.0.1';
 const SERVER_PORT = 54321;
@@ -98,7 +101,8 @@ async function runWatchdogReport() {
     return;
   }
 
-  const agents = ['claude', 'gemini1', 'gemini2', 'gemini3', 'gemini4', 'glm'];
+  const registryAgents = loadRegistry().agents;
+  const agents = registryAgents.map(a => a.id);
   let allHealthy = true;
 
   for (const key of agents) {
@@ -141,14 +145,8 @@ async function runWatchdogReport() {
   console.log('\n📊 TABELA DE STATUS MULTI-AGENTE HELIOS:\n');
   console.log('| Agente | Especialidade | Status Atual | Detalhes da Execução | Última Atualização |');
   console.log('|---|---|---|---|---|');
-  const SPECIALTY = {
-    claude: 'Core Architecture, Backend & Multiplayer',
-    gemini1: 'Shaders & VFX',
-    gemini2: 'Supervisor, UI & Net',
-    gemini3: 'Worldgen & Biomas',
-    gemini4: 'IA NPCs & Combate',
-    glm: 'Funções Puras & Math'
-  };
+  const SPECIALTY = {};
+  for (const a of registryAgents) SPECIALTY[a.id] = a.specialty || a.specialtyShort;
   for (const key of agents) {
     const agent = data.agentStatus[key] || { name: key, status: 'Não inicializado', lastUpdate: 0, details: '' };
     const elapsedSec = Math.floor((now - (agent.lastUpdate || 0)) / 1000);
