@@ -87,14 +87,21 @@ async function runCycle(cycleNum) {
   console.log(`================================================================================`);
 
   // 1. Sincronização e Fetch do Git
-  console.log('📡 [1/4] Sincronizando repositório e branches dos 4 agentes...');
+  console.log('📡 [1/5] Sincronizando repositório e branches dos 6 agentes...');
   runCmd('git fetch origin');
+
+  // 1.5. Sincroniza .agents/rules|skills -> ~/.gemini/rules|skills (achado real de
+  // 2026-08-28: o Gemini CLI le config global, nao o .agents/ do projeto, e nada
+  // sincronizava os dois - uma correcao em .agents/ ficava invisivel pros 4 agentes
+  // Gemini ate alguem copiar manualmente. Roda a cada ciclo pra nunca mais dessincronizar.
+  console.log('🔄 [1.5/5] Sincronizando .agents/ -> ~/.gemini/ (config real do Gemini CLI)...');
+  runCmd(`node "${__dirname}\\sync_gemini_config.js" "${WORKTREES.claude}"`);
 
   // 2. Leitura do Live Preview
   const previewData = await checkLivePreview();
   const agentsState = previewData?.agentStatuses || {};
 
-  console.log('\n📊 [2/4] Painel Consolidado de Status Multi-Agente:');
+  console.log('\n📊 [2/5] Painel Consolidado de Status Multi-Agente:');
   console.log('--------------------------------------------------------------------------------');
   console.log(' Agente      | Especialidade     | Status Atual                    | Tempo');
   console.log('-------------|-------------------|---------------------------------|------------');
@@ -115,12 +122,12 @@ async function runCycle(cycleNum) {
   console.log('--------------------------------------------------------------------------------');
 
   // 3. Verificação de Merges Pendentes no Main
-  console.log('\n🔗 [3/4] Verificando integridade e merge em main...');
+  console.log('\n🔗 [3/5] Verificando integridade e merge em main...');
   const mainLog = runCmd('git log -n 1 --oneline origin/main');
   console.log(`  Último commit em origin/main: ${mainLog}`);
 
   // 4. Conclusão do ciclo
-  console.log('\n✅ [4/4] Ciclo concluído. Próxima checagem em 60s.');
+  console.log('\n✅ [5/5] Ciclo concluído. Próxima checagem em 60s.');
   console.log('================================================================================\n');
 }
 
