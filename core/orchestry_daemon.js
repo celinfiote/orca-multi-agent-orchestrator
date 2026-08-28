@@ -1,8 +1,11 @@
 /**
- * HELIOS — Daemon de Orquestração Contínua Multi-Agente (Gemini 2 Supervisor)
- * Monitora Linear, terminais Orca e estado dos 4 agentes (Gemini 1, Gemini 2, Gemini 3, GLM 5.2).
+ * HELIOS — Daemon de Orquestração Contínua Multi-Agente (Supervisor Ativo da sessão)
+ * Monitora Linear, terminais Orca e estado dos 6 agentes (Claude, Gemini 1-4, GLM 5.2).
  * Executa em loop contínuo (daemon mode), checando a cada 60s por tarefas concluídas,
  * realizando auto-merge no main e disparando o próximo lote de trabalho sem interrupções.
+ *
+ * CORREÇÃO (2026-08-28): 'claude' estava ausente de WORKTREES e do painel impresso —
+ * o Claude Code (agente #1 de CLAUDE.md) era literalmente invisível pra este daemon.
  */
 
 const { execSync, spawn } = require('child_process');
@@ -11,6 +14,7 @@ const http = require('http');
 
 const POLL_INTERVAL_MS = 60 * 1000; // 60 segundos
 const WORKTREES = {
+  claude: 'C:\\Users\\Usuario\\Documents\\helios-claude',
   gemini2: 'C:\\Users\\Usuario\\Documents\\helios-gemini2',
   gemini1: 'C:\\Users\\Usuario\\Documents\\helios-gemini1',
   gemini3: 'C:\\Users\\Usuario\\Documents\\helios-gemini3',
@@ -95,12 +99,14 @@ async function runCycle(cycleNum) {
   console.log(' Agente      | Especialidade     | Status Atual                    | Tempo');
   console.log('-------------|-------------------|---------------------------------|------------');
 
+  const cl = agentsState.claude || { title: 'Idle / Aguardando', description: 'Pronto para backend e multiplayer' };
   const g1 = agentsState.gemini1 || { title: 'Idle / Aguardando', description: 'Pronto para shaders e VFX' };
   const g2 = agentsState.gemini2 || { title: 'Supervisor Ativo', description: 'Orquestrando tarefas e gameplay' };
   const g3 = agentsState.gemini3 || { title: 'Idle / Aguardando', description: 'Pronto para worldgen e biomas' };
   const g4 = agentsState.gemini4 || { title: 'Idle / Aguardando', description: 'Pronto para IA NPCs e combate' };
   const glm = agentsState.glm || { title: 'Idle / Aguardando', description: 'Pronto para física pura' };
 
+  console.log(` 🔴 Claude   | Backend & Net     | ${cl.title.padEnd(31).slice(0, 31)} | ${cl.time || 'Agora'}`);
   console.log(` 🔵 Gemini 1 | Shaders & VFX     | ${g1.title.padEnd(31).slice(0, 31)} | ${g1.time || 'Agora'}`);
   console.log(` 🟡 Gemini 3 | Worldgen & Biomas | ${g3.title.padEnd(31).slice(0, 31)} | ${g3.time || 'Agora'}`);
   console.log(` 🟣 Gemini 4 | IA NPCs & Combate | ${g4.title.padEnd(31).slice(0, 31)} | ${g4.time || 'Agora'}`);

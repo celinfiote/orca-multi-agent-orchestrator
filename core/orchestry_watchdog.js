@@ -1,14 +1,43 @@
 /**
- * Watchdog de Orquestração Multi-Agente do HELIOS (Gemini 2 Supervisor).
- * Monitora o status dos 4 agentes (Gemini 1, Gemini 2, Gemini 3, GLM 5.2) a cada 2 minutos,
- * detectando atrasos, travamentos por cota de tokens ou processos congelados.
+ * Watchdog de Orquestração Multi-Agente do HELIOS (Supervisor Ativo da sessão).
+ * Monitora o status dos 6 agentes (Claude, Gemini 1-4, GLM 5.2) a cada 2 minutos,
+ * detectando atrasos, travamentos por cota de tokens ou processos congelados. Também reporta
+ * a disponibilidade real (não estimada) da Rede Híbrida — Groq/DeepSeek/ImageMagick/PixelLab —
+ * que os 6 agentes devem acionar diretamente em vez de gastar cota de terminal.
+ *
+ * CORREÇÃO (2026-08-28): 'claude' estava ausente da lista de agentes monitorados — o
+ * Claude Code (agente #1 de CLAUDE.md) era literalmente invisível pra este watchdog.
  */
 
 const http = require('http');
+const { execSync } = require('child_process');
 
 const SERVER_HOST = '127.0.0.1';
 const SERVER_PORT = 54321;
 const STALL_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutos
+
+// Checagem real (não simulada) de disponibilidade dos recursos da Rede Híbrida — cada um só
+// entra como "Online" se a evidência concreta (variável de ambiente ou binário no PATH)
+// realmente existir, nunca por suposição.
+function checkMeshResources() {
+  const results = [];
+
+  const hasEnv = (name) => !!(process.env[name] && process.env[name].trim().length > 0);
+  results.push({ name: 'Groq Cloud API', ok: hasEnv('GROQ_API_KEY'), info: hasEnv('GROQ_API_KEY') ? 'GROQ_API_KEY definida' : 'GROQ_API_KEY ausente no ambiente' });
+  results.push({ name: 'DeepSeek V3/R1 API', ok: hasEnv('DEEPSEEK_API_KEY'), info: hasEnv('DEEPSEEK_API_KEY') ? 'DEEPSEEK_API_KEY definida' : 'DEEPSEEK_API_KEY ausente no ambiente' });
+  results.push({ name: 'PixelLab API', ok: hasEnv('PIXELLAB_API_KEY'), info: hasEnv('PIXELLAB_API_KEY') ? 'PIXELLAB_API_KEY definida' : 'PIXELLAB_API_KEY ausente no ambiente' });
+
+  for (const [label, cmd] of [['ImageMagick 7 (magick)', 'magick'], ['Python (Sobel normal maps)', 'python']]) {
+    try {
+      execSync(`where ${cmd}`, { stdio: ['ignore', 'ignore', 'ignore'] });
+      results.push({ name: label, ok: true, info: `'${cmd}' encontrado no PATH` });
+    } catch (e) {
+      results.push({ name: label, ok: false, info: `'${cmd}' NÃO encontrado no PATH` });
+    }
+  }
+
+  return results;
+}
 
 function checkAgentsStatus() {
   return new Promise((resolve, reject) => {
@@ -69,7 +98,7 @@ async function runWatchdogReport() {
     return;
   }
 
-  const agents = ['gemini1', 'gemini2', 'gemini3', 'gemini4', 'glm'];
+  const agents = ['claude', 'gemini1', 'gemini2', 'gemini3', 'gemini4', 'glm'];
   let allHealthy = true;
 
   for (const key of agents) {
@@ -108,15 +137,31 @@ async function runWatchdogReport() {
   }
   console.log('================================================================================');
 
-  // Exibe Tabela Formatada para o Terminal do Gemini 2
+  // Exibe Tabela Formatada para o Terminal do Supervisor Ativo
   console.log('\n📊 TABELA DE STATUS MULTI-AGENTE HELIOS:\n');
   console.log('| Agente | Especialidade | Status Atual | Detalhes da Execução | Última Atualização |');
   console.log('|---|---|---|---|---|');
+  const SPECIALTY = {
+    claude: 'Core Architecture, Backend & Multiplayer',
+    gemini1: 'Shaders & VFX',
+    gemini2: 'Supervisor, UI & Net',
+    gemini3: 'Worldgen & Biomas',
+    gemini4: 'IA NPCs & Combate',
+    glm: 'Funções Puras & Math'
+  };
   for (const key of agents) {
     const agent = data.agentStatus[key] || { name: key, status: 'Não inicializado', lastUpdate: 0, details: '' };
     const elapsedSec = Math.floor((now - (agent.lastUpdate || 0)) / 1000);
-    const specialty = key === 'gemini1' ? 'Shaders & VFX' : key === 'gemini2' ? 'Supervisor, UI & Net' : key === 'gemini3' ? 'Worldgen & Biomas' : key === 'gemini4' ? 'IA NPCs & Combate' : 'Funções Puras & Math';
-    console.log(`| **${agent.name || key}** | ${specialty} | \`${agent.status || 'N/A'}\` | ${agent.details || '—'} | há ${elapsedSec}s |`);
+    console.log(`| **${agent.name || key}** | ${SPECIALTY[key] || key} | \`${agent.status || 'N/A'}\` | ${agent.details || '—'} | há ${elapsedSec}s |`);
+  }
+
+  // Rede Híbrida: disponibilidade real dos recursos que os 6 agentes devem acionar
+  // diretamente (Groq/DeepSeek/ImageMagick/PixelLab) em vez de gastar cota de terminal.
+  console.log('\n📊 REDE HÍBRIDA (Smart AI Mesh) — Disponibilidade Real:\n');
+  console.log('| Recurso | Status | Evidência |');
+  console.log('|---|---|---|');
+  for (const r of checkMeshResources()) {
+    console.log(`| **${r.name}** | ${r.ok ? '🟢 Online' : '🔴 Indisponível'} | ${r.info} |`);
   }
   console.log('\n');
 }

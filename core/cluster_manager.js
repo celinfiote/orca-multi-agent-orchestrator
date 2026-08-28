@@ -3,8 +3,26 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const STATE_FILE = path.join(__dirname, 'cluster_state.json');
-const PRIORITY_QUEUE = ['gemini2', 'gemini1', 'gemini3', 'gemini4', 'glm'];
+// CORREÇÃO (2026-08-28): 'claude' estava ausente desta fila desde sempre — o Claude Code é o
+// agente #1 declarado em CLAUDE.md/AGENTS.md e o supervisor padrão de /orchestra, mas era
+// literalmente invisível pra este script (nunca podia ser eleito, nunca entrava em quarentena
+// aqui, `status`/`can-dispatch claude` simplesmente não existiam). Ordem abaixo consistente
+// com a fila de failover documentada em orca_orchestration_failover_protocol.md
+// ("Gemini 3 -> Claude -> GLM 5.2 -> Gemini 4 -> Gemini 2 -> Gemini 1").
+const PRIORITY_QUEUE = ['gemini3', 'claude', 'glm', 'gemini4', 'gemini2', 'gemini1'];
 const QUARANTINE_DURATION_MS = 60 * 60 * 1000; // 60 minutos obrigatórios
+
+function defaultNode(id, isSupervisor) {
+  return {
+    role: isSupervisor ? 'supervisor' : 'worker',
+    status: isSupervisor ? 'ACTIVE' : 'READY',
+    pool: 'ACTIVE',
+    quarantine_until: null,
+    current_task: null,
+    last_seen: Date.now(),
+    retries: 0
+  };
+}
 
 function loadState() {
   if (fs.existsSync(STATE_FILE)) {
@@ -12,6 +30,25 @@ function loadState() {
       const parsed = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
       if (!parsed.active_pool) parsed.active_pool = [...PRIORITY_QUEUE];
       if (!parsed.quarantine_pool) parsed.quarantine_pool = [];
+      if (!parsed.nodes) parsed.nodes = {};
+      // Backfill: qualquer agente novo na fila (ex.: 'claude' adicionado nesta correção) que
+      // um cluster_state.json salvo anteriormente ainda não conhece — evita crashar
+      // `state.nodes[agent]` undefined em vez de silenciosamente nunca aparecer no status.
+      for (const id of PRIORITY_QUEUE) {
+        if (!parsed.nodes[id]) {
+          parsed.nodes[id] = defaultNode(id, false);
+          if (!parsed.active_pool.includes(id)) parsed.active_pool.push(id);
+        }
+      }
+      // Mesmo raciocínio pra priority_queue: um cluster_state.json salvo com a fila antiga
+      // (sem 'claude') precisa ganhar os IDs novos, não só os nodes/active_pool.
+      if (!parsed.priority_queue) {
+        parsed.priority_queue = [...PRIORITY_QUEUE];
+      } else {
+        for (const id of PRIORITY_QUEUE) {
+          if (!parsed.priority_queue.includes(id)) parsed.priority_queue.push(id);
+        }
+      }
       return parsed;
     } catch (e) {
       console.warn('Erro ao carregar cluster_state.json, recriando...', e.message);
@@ -20,15 +57,7 @@ function loadState() {
 
   const initialNodes = {};
   for (const id of PRIORITY_QUEUE) {
-    initialNodes[id] = {
-      role: id === 'gemini2' ? 'supervisor' : 'worker',
-      status: id === 'gemini2' ? 'ACTIVE' : 'READY',
-      pool: 'ACTIVE',
-      quarantine_until: null,
-      current_task: null,
-      last_seen: Date.now(),
-      retries: 0
-    };
+    initialNodes[id] = defaultNode(id, id === 'gemini2');
   }
 
   return {
