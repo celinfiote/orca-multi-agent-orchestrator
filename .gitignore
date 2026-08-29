@@ -4,3 +4,10 @@ node_modules/
 .env
 .DS_Store
 Thumbs.db
+
+# Estado de orcamento diario do DeepSeek (core/deepseek_budget.js) - runtime
+# puro compartilhado entre os 6 agentes via caminho de arquivo absoluto na
+# mesma maquina, nao via git. Versionar isso causaria ruido de commit a
+# cada chamada de API e conflito entre agentes escrevendo ao mesmo tempo -
+# ver docstring de deepseek_budget.js.
+core/deepseek_budget_state.json
