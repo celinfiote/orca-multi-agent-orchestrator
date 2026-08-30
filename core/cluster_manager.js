@@ -103,7 +103,29 @@ function getActiveTerminalDetails() {
         const readRaw = execSync(`orca terminal read --terminal ${t.handle} --limit 35 --json`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
         const readParsed = JSON.parse(readRaw);
         const tail = readParsed.result?.terminal?.tail || [];
-        const systemLines = tail.filter(l => !l.trim().startsWith('❯') && !l.trim().startsWith('>') && !l.trim().startsWith('● Read('));
+        const systemLines = tail.filter(l => {
+          const trimmed = l.trim();
+          if (!trimmed) return false;
+          if (trimmed.startsWith('❯') || trimmed.startsWith('>') || trimmed.startsWith('●') || trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed.startsWith('|') || trimmed.startsWith('#')) return false;
+          if (trimmed.includes('cluster_state') || trimmed.includes('motivo') || trimmed.includes('misatribuição') || trimmed.includes('quarantine_reason')) return false;
+          // Achado real (2026-08-30, terminal do próprio Claude Code marcado
+          // TOKEN_EXHAUSTED com motivo "/HTTP 429/i" sem nenhum erro real —
+          // usuário reportou que o painel dizia "sem cota" com cota de sobra
+          // no indicador nativo do Orca). O bloqueio de palavras-chave acima
+          // (linha anterior) é reativo por natureza — cada nova ocorrência
+          // exige adicionar mais uma palavra à lista, e nunca cobre tudo que
+          // um agente pode discutir sobre esses mesmos padrões no futuro
+          // (documentação, commits, código deste próprio arquivo sendo lido/
+          // editado). Filtro mais geral: texto em markdown que MENCIONA um
+          // padrão de erro (ex: discutindo "`HTTP 429`" ou "/HTTP 429/i" como
+          // exemplo) quase sempre usa crase (inline code) ou barras de
+          // delimitador de regex — erro real de API/sistema nunca usa essas
+          // formatações. Excluir qualquer linha com esses caracteres reduz
+          // drasticamente falso-positivo de prosa sem precisar prever cada
+          // palavra-chave nova.
+          if (trimmed.includes('`') || /\/[A-Za-z][^/\n]{2,40}\/[a-z]?\b/.test(trimmed)) return false;
+          return true;
+        });
         fullOutput = systemLines.join('\n');
       } catch (e) {}
 
@@ -181,8 +203,15 @@ function auditAndSyncClusterState(state) {
         if (!state.active_pool.includes(id)) state.active_pool.push(id);
       }
     } else if (state.nodes[id].status === 'TOKEN_EXHAUSTED') {
+      // Achado real (2026-08-30): este ramo só limpava status/pool, deixando
+      // quarantine_reason/quarantine_until/reset_info velhos pra trás quando um
+      // nó saía do quarantine_pool por outro caminho (ex: correção manual) — o
+      // painel de disponibilidade continuava mostrando o motivo antigo até o
+      // próximo ciclo completo. Limpa tudo de uma vez, igual ao ramo de cima.
       state.nodes[id].status = 'READY';
       state.nodes[id].pool = 'ACTIVE';
+      state.nodes[id].quarantine_until = null;
+      state.nodes[id].quarantine_reason = null;
     }
   }
 

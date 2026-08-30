@@ -9,14 +9,14 @@
     "claude"
   ],
   "active_pool": [
-    "gemini3",
     "glm",
+    "gemini3",
+    "gemini4",
     "claude"
   ],
   "quarantine_pool": [
     "gemini1",
-    "gemini2",
-    "gemini4"
+    "gemini2"
   ],
   "last_failover": 1787871358800,
   "nodes": {
@@ -46,21 +46,23 @@
       "role": "supervisor",
       "status": "ACTIVE",
       "pool": "ACTIVE",
-      "quarantine_until": null,
+      "quarantine_until": 1788009898471,
       "current_task": null,
-      "last_seen": 1787871358800,
-      "retries": 0
+      "last_seen": 1788034822421,
+      "retries": 0,
+      "quarantine_reason": "/Error ID:\\s*[a-f0-9-]+-\\d+/i",
+      "reset_info": "Pendente de reset"
     },
     "gemini4": {
       "role": "worker",
-      "status": "TOKEN_EXHAUSTED",
-      "pool": "QUARANTINE",
-      "quarantine_until": 1787947318788,
+      "status": "READY",
+      "pool": "ACTIVE",
+      "quarantine_until": null,
       "current_task": null,
-      "last_seen": 1787926990381,
+      "last_seen": 1788034822437,
       "retries": 0,
-      "quarantine_reason": "/Individual quota reached/i",
-      "reset_info": "in 52m18s."
+      "quarantine_reason": null,
+      "reset_info": "in 24m14s."
     },
     "glm": {
       "role": "worker",
@@ -77,8 +79,10 @@
       "pool": "ACTIVE",
       "quarantine_until": null,
       "current_task": null,
-      "last_seen": 1787943717063,
-      "retries": 0
+      "last_seen": 1788059130677,
+      "retries": 0,
+      "quarantine_reason": null,
+      "reset_info": null
     }
   }
 }
