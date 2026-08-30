@@ -10,9 +10,9 @@
   ],
   "active_pool": [
     "glm",
-    "gemini3",
     "gemini4",
-    "claude"
+    "claude",
+    "gemini3"
   ],
   "quarantine_pool": [
     "gemini1",
@@ -46,12 +46,12 @@
       "role": "supervisor",
       "status": "ACTIVE",
       "pool": "ACTIVE",
-      "quarantine_until": 1788009898471,
+      "quarantine_until": null,
       "current_task": null,
-      "last_seen": 1788034822421,
+      "last_seen": 1788060011707,
       "retries": 0,
-      "quarantine_reason": "/Error ID:\\s*[a-f0-9-]+-\\d+/i",
-      "reset_info": "Pendente de reset"
+      "quarantine_reason": null,
+      "reset_info": null
     },
     "gemini4": {
       "role": "worker",

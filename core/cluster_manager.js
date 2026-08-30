@@ -221,6 +221,12 @@ function auditAndSyncClusterState(state) {
     if (state.nodes[state.active_supervisor]) {
       state.nodes[state.active_supervisor].pool = 'ACTIVE';
       state.nodes[state.active_supervisor].status = 'ACTIVE';
+      // Mesmo gap do ramo de recuperação acima (achado 2026-08-30) — este ramo
+      // forçava o supervisor pra ACTIVE mas deixava quarantine_reason/
+      // quarantine_until velhos pra trás (achado ao ver gemini3 com "ACTIVE" e
+      // um motivo de quarentena fantasma ao mesmo tempo).
+      state.nodes[state.active_supervisor].quarantine_until = null;
+      state.nodes[state.active_supervisor].quarantine_reason = null;
     }
   }
 
