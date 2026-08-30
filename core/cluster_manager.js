@@ -216,17 +216,55 @@ function auditAndSyncClusterState(state) {
   }
 
   if (!state.active_pool.includes(state.active_supervisor)) {
-    state.active_pool.push(state.active_supervisor);
-    state.quarantine_pool = state.quarantine_pool.filter(item => item !== state.active_supervisor);
-    if (state.nodes[state.active_supervisor]) {
-      state.nodes[state.active_supervisor].pool = 'ACTIVE';
-      state.nodes[state.active_supervisor].status = 'ACTIVE';
-      // Mesmo gap do ramo de recuperação acima (achado 2026-08-30) — este ramo
-      // forçava o supervisor pra ACTIVE mas deixava quarantine_reason/
-      // quarantine_until velhos pra trás (achado ao ver gemini3 com "ACTIVE" e
-      // um motivo de quarentena fantasma ao mesmo tempo).
-      state.nodes[state.active_supervisor].quarantine_until = null;
-      state.nodes[state.active_supervisor].quarantine_reason = null;
+    // BUG REAL corrigido em 2026-08-30 (achado do usuário: gemini3 aparecia
+    // "ACTIVE"/"disponível" no painel com o terminal mostrando "Individual quota
+    // reached" na cara, DUAS vezes seguidas): este ramo forçava o supervisor de
+    // volta pra ACTIVE_POOL incondicionalmente, mesmo quando o motivo dele ter
+    // saído do active_pool no loop logo acima era um erro de cota REAL detectado
+    // NESTA MESMA auditoria (não staleness, não um caso órfão) — ou seja, a
+    // auditoria acertava a detecção e este bloco desfazia o acerto no mesmo
+    // segundo, sempre, pra qualquer agente que estivesse segurando o papel de
+    // supervisor. Correção anterior (comentário que existia aqui) só limpava os
+    // campos fantasmas de quarentena, sem questionar por que o supervisor nunca
+    // ficava quarentenado de verdade — tratava o sintoma, não a causa.
+    //
+    // Comportamento correto: só reativar sem condição se o supervisor NÃO tem erro
+    // de cota real nesta auditoria (caso órfão genuíno — ex: estado inicial, ou
+    // active_pool mexido por fora). Se ele TEM erro de cota real, fazer failover de
+    // verdade — promover o próximo candidato saudável da priority_queue — em vez de
+    // fingir que o supervisor exaurido continua disponível.
+    const supervisorHasRealQuotaError = !!terminalDetails[state.active_supervisor]?.hasQuotaError;
+
+    if (!supervisorHasRealQuotaError) {
+      state.active_pool.push(state.active_supervisor);
+      state.quarantine_pool = state.quarantine_pool.filter(item => item !== state.active_supervisor);
+      if (state.nodes[state.active_supervisor]) {
+        state.nodes[state.active_supervisor].pool = 'ACTIVE';
+        state.nodes[state.active_supervisor].status = 'ACTIVE';
+        state.nodes[state.active_supervisor].quarantine_until = null;
+        state.nodes[state.active_supervisor].quarantine_reason = null;
+      }
+    } else {
+      const exhaustedSupervisor = state.active_supervisor;
+      let nextSupervisor = null;
+      for (const id of state.priority_queue) {
+        if (id !== exhaustedSupervisor && state.active_pool.includes(id) && state.nodes[id].status !== 'TOKEN_EXHAUSTED') {
+          nextSupervisor = id;
+          break;
+        }
+      }
+      if (nextSupervisor) {
+        if (state.nodes[exhaustedSupervisor]) state.nodes[exhaustedSupervisor].role = 'worker';
+        state.nodes[nextSupervisor].role = 'supervisor';
+        state.nodes[nextSupervisor].status = 'ACTIVE';
+        state.nodes[nextSupervisor].pool = 'ACTIVE';
+        if (!state.active_pool.includes(nextSupervisor)) state.active_pool.push(nextSupervisor);
+        state.active_supervisor = nextSupervisor;
+        state.last_failover = now;
+      }
+      // Se ninguém mais está disponível pra assumir, o cluster simplesmente fica
+      // sem supervisor ativo até alguém recuperar cota — melhor que mentir que o
+      // supervisor exaurido está disponível.
     }
   }
 

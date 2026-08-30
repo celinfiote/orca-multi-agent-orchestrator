@@ -68,7 +68,17 @@ const server = http.createServer((req, res) => {
   }
 
 function loadClusterState() {
-  const statePath = path.join('C:\\Users\\Usuario\\Documents\\helios-gemini3\\tools\\cluster_state.json');
+  // CORREÇÃO REAL (2026-08-30 — achado do usuário: "aqui diz que os agentes gemini
+  // ainda tem cuota, porem todos estão esgotados"): este caminho apontava pra
+  // `helios-gemini3\tools\cluster_state.json`, uma cópia ABANDONADA que nada mais
+  // escreve (parada há 13h+ no momento do achado). O arquivo que a auditoria REAL
+  // (`core/cluster_manager.js audit`, chamada pelo daemon a cada 60s) de fato
+  // atualiza é `core/cluster_state.json` — este era o mesmo bug que o comentário no
+  // topo de cluster_manager.js já registrava como corrigido em 2026-08-28, mas o
+  // código aqui nunca foi de fato alterado (a correção ficou só na intenção/
+  // changelog, não no arquivo). Corrigido de verdade agora, apontando pro STATE_FILE
+  // canônico do cluster_manager.js.
+  const statePath = path.join(__dirname, '..', 'core', 'cluster_state.json');
   if (fs.existsSync(statePath)) {
     try {
       return JSON.parse(fs.readFileSync(statePath, 'utf8'));
