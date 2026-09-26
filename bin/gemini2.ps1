@@ -8,72 +8,60 @@ if (-not ($currentPath -like "*helios-gemini2*")) {
     }
 }
 
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-
-public class CredManager2 {
-    [DllImport("advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern bool CredWrite([In] ref CREDENTIAL userCredential, int flags);
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct CREDENTIAL {
-        public int Flags;
-        public int Type;
-        public string TargetName;
-        public string Comment;
-        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
-        public int CredentialBlobSize;
-        public IntPtr CredentialBlob;
-        public int Persist;
-        public int AttributeCount;
-        public IntPtr Attributes;
-        public string TargetAlias;
-        public string UserName;
+# REESCRITO 2026-09-05 -- ver comentario completo em gemini1.ps1 (mesma
+# causa raiz: agy.exe/Antigravity CLI so autentica via keyring do Windows,
+# unico por usuario, impossivel de isolar por conta; trocado pra CLI
+# oficial do Google com API key propria por conta).
+#
+# PENDENTE: esta conta (conta2) ainda nao tem uma chave real cadastrada
+# -- ver C:\Users\Usuario\.gemini-accounts\conta2\gemini_api_key.txt.PENDENTE.
+# Gere uma em https://aistudio.google.com/apikey e salve o conteudo (so a
+# chave) em C:\Users\Usuario\.gemini-accounts\conta2\gemini_api_key.txt
+# (sem o sufixo .PENDENTE) para esta conta parar de cair no login
+# interativo compartilhado.
+$keyFile = "C:\Users\Usuario\.gemini-accounts\conta2\gemini_api_key.txt"
+if (Test-Path $keyFile) {
+    $key = (Get-Content $keyFile -Raw).Trim()
+    if ($key) {
+        $env:GEMINI_API_KEY = $key
+        $env:GOOGLE_API_KEY = $key
     }
-
-    public static bool WriteGeneric(string target, string userName, string secret) {
-        byte[] bytes = Encoding.UTF8.GetBytes(secret);
-        IntPtr blobPtr = Marshal.AllocHGlobal(bytes.Length);
-        Marshal.Copy(bytes, 0, blobPtr, bytes.Length);
-
-        CREDENTIAL cred = new CREDENTIAL();
-        cred.Flags = 0;
-        cred.Type = 1;
-        cred.TargetName = target;
-        cred.UserName = userName;
-        cred.CredentialBlobSize = bytes.Length;
-        cred.CredentialBlob = blobPtr;
-        cred.Persist = 2;
-
-        bool result = CredWrite(ref cred, 0);
-        Marshal.FreeHGlobal(blobPtr);
-        return result;
-    }
-}
-"@ -ErrorAction SilentlyContinue
-
-$tokenPath = "C:\ProgramData\agy\conta2_token.txt"
-if (-not (Test-Path $tokenPath)) {
-    $tokenPath = "C:\Users\Usuario\.gemini\conta2_token.txt"
+} else {
+    Write-Warning "conta2: gemini_api_key.txt nao encontrado -- caindo pro fluxo de login interativo padrao (provavelmente a MESMA conta compartilhada de novo). Gere uma chave em https://aistudio.google.com/apikey."
 }
 
-if (Test-Path $tokenPath) {
-    $token2 = [System.IO.File]::ReadAllText($tokenPath)
-    [CredManager2]::WriteGeneric("gemini:antigravity", "antigravity", $token2) | Out-Null
-}
+# CORRIGIDO 2026-09-07 -- ver comentario completo em gemini1.ps1 (mesma
+# causa raiz: sem isolar USERPROFILE/HOME por conta, a CLI lia o
+# `oauth_creds.json` do perfil real compartilhado em vez da API key).
+$env:USERPROFILE = "C:\Users\Usuario\.gemini-accounts\conta2"
+$env:HOME = "C:\Users\Usuario\.gemini-accounts\conta2"
 
-$hasContinueOrNew = $false
+$geminiExe = "C:\Users\Usuario\AppData\Roaming\npm\gemini.cmd"
+
+$hasSessionControl = $false
 foreach ($arg in $rest) {
-    if ($arg -match "^(-c|--continue|--conversation|--new-project)$") {
-        $hasContinueOrNew = $true
+    if ($arg -match "^(-r|--resume|--session-id|--session-file|--list-sessions|--delete-session)$") {
+        $hasSessionControl = $true
         break
     }
 }
 
-if (-not $hasContinueOrNew) {
-    & "C:\Users\Usuario\AppData\Local\agy\bin\agy.exe" -c --dangerously-skip-permissions @rest
+# CONFIGURADO 2026-09-07 -- ver comentario completo em gemini1.ps1
+# (modelo de maior performance disponivel QUE FUNCIONA nesta chave
+# gratuita: gemini-3.8-flash -- tier "Pro", incluindo o mais novo
+# gemini-3.1-pro-preview, retorna quota=0 no plano gratuito, testado
+# de verdade contra a API).
+$hasModelControl = $false
+foreach ($arg in $rest) {
+    if ($arg -match "^(-m|--model)$") {
+        $hasModelControl = $true
+        break
+    }
+}
+$modelArgs = if (-not $hasModelControl) { @("-m", "gemini-3.8-flash") } else { @() }
+
+if (-not $hasSessionControl) {
+    & $geminiExe --skip-trust --yolo @modelArgs -r latest @rest
 } else {
-    & "C:\Users\Usuario\AppData\Local\agy\bin\agy.exe" --dangerously-skip-permissions @rest
+    & $geminiExe --skip-trust --yolo @modelArgs @rest
 }

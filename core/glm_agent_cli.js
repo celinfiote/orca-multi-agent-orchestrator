@@ -11,7 +11,9 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const API_KEY = process.env.OPENAI_API_KEY || "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";
+// Chave NUNCA no codigo (este repositorio e publico): vem do ambiente.
+const API_KEY = process.env.OPENAI_API_KEY || process.env.NVIDIA_API_KEY;
+if (!API_KEY) { console.error("Defina NVIDIA_API_KEY (ou OPENAI_API_KEY) no ambiente."); process.exit(1); }
 const BASE_URL = process.env.OPENAI_BASE_URL || "https://integrate.api.nvidia.com/v1";
 const WORKTREE_DIR = fs.existsSync("C:\\Users\\Usuario\\Documents\\helios-glm") 
     ? "C:\\Users\\Usuario\\Documents\\helios-glm" 

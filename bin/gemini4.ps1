@@ -8,82 +8,57 @@ if (-not ($currentPath -like "*helios-gemini4*")) {
     }
 }
 
-$tokenPath = "C:\Users\Usuario\.gemini\conta4_token.txt"
-if (-not (Test-Path $tokenPath)) {
-    $tokenPath = "C:\ProgramData\agy\conta4_token.txt"
-}
-if (Test-Path $tokenPath) {
-    $token4 = (Get-Content $tokenPath -Raw).Trim()
-    $env:GEMINI_API_KEY = $token4
-    $env:GOOGLE_API_KEY = $token4
-}
-
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-
-public class CredManager4 {
-    [DllImport("advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern bool CredWrite([In] ref CREDENTIAL userCredential, int flags);
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct CREDENTIAL {
-        public int Flags;
-        public int Type;
-        public string TargetName;
-        public string Comment;
-        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
-        public int CredentialBlobSize;
-        public IntPtr CredentialBlob;
-        public int Persist;
-        public int AttributeCount;
-        public IntPtr Attributes;
-        public string TargetAlias;
-        public string UserName;
+# REESCRITO 2026-09-05 -- ver comentario completo em gemini1.ps1 (mesma
+# causa raiz). Esta conta ja tinha uma chave de API real e correta
+# (gemini4_api_key.txt), so nao estava sendo usada pelo binario certo --
+# a tentativa anterior jogava a chave em $env:GEMINI_API_KEY mas ainda
+# chamava agy.exe (Antigravity), que ignora essa variavel nesse fluxo.
+# Copiada pra C:\Users\Usuario\.gemini-accounts\conta4\gemini_api_key.txt
+# e agora usada com a CLI oficial do Google, que respeita a variavel de
+# verdade.
+$keyFile = "C:\Users\Usuario\.gemini-accounts\conta4\gemini_api_key.txt"
+if (Test-Path $keyFile) {
+    $key = (Get-Content $keyFile -Raw).Trim()
+    if ($key) {
+        $env:GEMINI_API_KEY = $key
+        $env:GOOGLE_API_KEY = $key
     }
-
-    public static bool WriteGeneric(string target, string userName, string secret) {
-        byte[] bytes = Encoding.UTF8.GetBytes(secret);
-        IntPtr blobPtr = Marshal.AllocHGlobal(bytes.Length);
-        Marshal.Copy(bytes, 0, blobPtr, bytes.Length);
-
-        CREDENTIAL cred = new CREDENTIAL();
-        cred.Flags = 0;
-        cred.Type = 1;
-        cred.TargetName = target;
-        cred.UserName = userName;
-        cred.CredentialBlobSize = bytes.Length;
-        cred.CredentialBlob = blobPtr;
-        cred.Persist = 2;
-
-        bool result = CredWrite(ref cred, 0);
-        Marshal.FreeHGlobal(blobPtr);
-        return result;
-    }
-}
-"@ -ErrorAction SilentlyContinue
-
-$tokenPath = "C:\Users\Usuario\.gemini\conta4_token.txt"
-if (-not (Test-Path $tokenPath)) {
-    $tokenPath = "C:\ProgramData\agy\conta4_token.txt"
+} else {
+    Write-Warning "conta4: gemini_api_key.txt nao encontrado -- caindo pro fluxo de login interativo padrao (provavelmente a MESMA conta compartilhada de novo)."
 }
 
-if (Test-Path $tokenPath) {
-    $token4 = [System.IO.File]::ReadAllText($tokenPath)
-    [CredManager4]::WriteGeneric("gemini:antigravity", "antigravity", $token4) | Out-Null
-}
+# CORRIGIDO 2026-09-07 -- ver comentario completo em gemini1.ps1 (mesma
+# causa raiz: sem isolar USERPROFILE/HOME por conta, a CLI lia o
+# `oauth_creds.json` do perfil real compartilhado em vez da API key).
+$env:USERPROFILE = "C:\Users\Usuario\.gemini-accounts\conta4"
+$env:HOME = "C:\Users\Usuario\.gemini-accounts\conta4"
 
-$hasContinueOrNew = $false
+$geminiExe = "C:\Users\Usuario\AppData\Roaming\npm\gemini.cmd"
+
+$hasSessionControl = $false
 foreach ($arg in $rest) {
-    if ($arg -match "^(-c|--continue|--conversation|--new-project)$") {
-        $hasContinueOrNew = $true
+    if ($arg -match "^(-r|--resume|--session-id|--session-file|--list-sessions|--delete-session)$") {
+        $hasSessionControl = $true
         break
     }
 }
 
-if (-not $hasContinueOrNew) {
-    & "C:\Users\Usuario\AppData\Local\agy\bin\agy.exe" -c --dangerously-skip-permissions @rest
+# CONFIGURADO 2026-09-07 -- ver comentario completo em gemini1.ps1
+# (modelo de maior performance disponivel QUE FUNCIONA nesta chave
+# gratuita: gemini-3.8-flash -- tier "Pro", incluindo o mais novo
+# gemini-3.1-pro-preview, retorna quota=0 no plano gratuito, testado
+# de verdade contra a API).
+$hasModelControl = $false
+foreach ($arg in $rest) {
+    if ($arg -match "^(-m|--model)$") {
+        $hasModelControl = $true
+        break
+    }
+}
+$modelArgs = if (-not $hasModelControl) { @("-m", "gemini-3.8-flash") } else { @() }
+
+if (-not $hasSessionControl) {
+    & $geminiExe --skip-trust --yolo @modelArgs -r latest @rest
 } else {
-    & "C:\Users\Usuario\AppData\Local\agy\bin\agy.exe" --dangerously-skip-permissions @rest
+    & $geminiExe --skip-trust --yolo @modelArgs @rest
 }

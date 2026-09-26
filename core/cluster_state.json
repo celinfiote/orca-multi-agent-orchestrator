@@ -10,59 +10,58 @@
   ],
   "active_pool": [
     "glm",
-    "claude"
-  ],
-  "quarantine_pool": [
-    "gemini4",
+    "claude",
     "gemini1",
     "gemini2",
+    "gemini4",
     "gemini3"
   ],
+  "quarantine_pool": [],
   "last_failover": 1788114120853,
   "nodes": {
     "gemini2": {
       "role": "worker",
-      "status": "TOKEN_EXHAUSTED",
-      "pool": "QUARANTINE",
-      "quarantine_until": 1788117367547,
+      "status": "READY",
+      "pool": "ACTIVE",
+      "quarantine_until": null,
       "current_task": null,
-      "last_seen": 1788113769310,
+      "last_seen": 1788869333457,
       "retries": 0,
-      "quarantine_reason": "/Individual quota reached/i",
-      "reset_info": "in 57h2m22s."
+      "quarantine_reason": null,
+      "reset_info": "in 1h23m32s."
     },
     "gemini1": {
       "role": "worker",
-      "status": "TOKEN_EXHAUSTED",
-      "pool": "QUARANTINE",
-      "quarantine_until": 1788117067305,
+      "status": "READY",
+      "pool": "ACTIVE",
+      "quarantine_until": null,
       "current_task": null,
-      "last_seen": 1788113689983,
+      "last_seen": 1788862227059,
       "retries": 0,
-      "quarantine_reason": "/Individual quota reached/i",
-      "reset_info": "in 36h34m30s."
+      "quarantine_reason": null,
+      "reset_info": "in 1h32m12s."
     },
     "gemini3": {
       "role": "worker",
-      "status": "TOKEN_EXHAUSTED",
-      "pool": "QUARANTINE",
-      "quarantine_until": 1788117720853,
+      "status": "READY",
+      "pool": "ACTIVE",
+      "quarantine_until": null,
       "current_task": null,
-      "last_seen": 1788113462859,
+      "last_seen": 1788887019962,
       "retries": 0,
-      "quarantine_reason": "/Individual quota reached/i",
-      "reset_info": "in 94h48m16s."
+      "quarantine_reason": null,
+      "reset_info": "in 3m48s."
     },
     "gemini4": {
       "role": "worker",
-      "status": "TOKEN_EXHAUSTED",
-      "pool": "QUARANTINE",
-      "quarantine_until": 1788117067305,
+      "status": "READY",
+      "pool": "ACTIVE",
+      "quarantine_until": null,
       "current_task": null,
-      "last_seen": 1788113456349,
+      "last_seen": 1788885819124,
       "retries": 0,
-      "quarantine_reason": "/Individual quota reached/i",
-      "reset_info": "in 94h48m17s."
+      "quarantine_reason": null,
+      "reset_info": "in 1h13m56s."
     },
     "glm": {
       "role": "supervisor",
@@ -79,10 +78,10 @@
       "pool": "ACTIVE",
       "quarantine_until": null,
       "current_task": null,
-      "last_seen": 1788063663780,
+      "last_seen": 1788846959059,
       "retries": 0,
       "quarantine_reason": null,
-      "reset_info": null
+      "reset_info": "3:20am (America/Sao_Paulo)"
     }
   }
 }
