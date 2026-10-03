@@ -40,7 +40,43 @@ const fs = require('fs');
 const path = require('path');
 
 const STATE_FILE = path.join(__dirname, 'deepseek_budget_state.json');
-const DAILY_CAP_USD = 0.20;
+// Arquivo SEPARADO do estado diário de propósito: o teto é uma preferência
+// do usuário, não deve resetar à meia-noite UTC junto com spent_usd/calls_today.
+const CONFIG_FILE = path.join(__dirname, 'deepseek_budget_config.json');
+const DAILY_CAP_USD_DEFAULT = 0.20;
+
+/** Lê o teto diário efetivo: usa o valor salvo em CONFIG_FILE se existir e for
+ * um número positivo válido, senão cai no default documentado acima. */
+function loadCap() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    if (typeof raw.daily_cap_usd === 'number' && raw.daily_cap_usd > 0) {
+      return raw.daily_cap_usd;
+    }
+  } catch (e) {
+    // Arquivo não existe ainda ou está corrompido — usa o default, sem quebrar.
+  }
+  return DAILY_CAP_USD_DEFAULT;
+}
+
+/** Muda o teto diário persistentemente (comando /limite do CLI). Validação
+ * de "é um número positivo" é responsabilidade de quem chama (CLI), aqui só
+ * persiste — mas rejeita silenciosamente um valor obviamente inválido pra
+ * nunca deixar o arquivo de config num estado que quebra loadCap(). */
+function setCap(novoValorUsd) {
+  const valor = Number(novoValorUsd);
+  if (!Number.isFinite(valor) || valor <= 0) {
+    throw new Error(`Valor de teto inválido: ${novoValorUsd} (precisa ser um número positivo)`);
+  }
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify({ daily_cap_usd: valor }, null, 2), 'utf8');
+  return valor;
+}
+
+// Mantido como export por compatibilidade com qualquer código que já lia a
+// constante diretamente — mas é o DEFAULT, não necessariamente o teto ativo
+// agora (que pode ter sido mudado via /limite). Código novo deve chamar
+// loadCap() ou ler .cap_usd do retorno de checkBudget(), nunca esta constante.
+const DAILY_CAP_USD = DAILY_CAP_USD_DEFAULT;
 
 // USD por 1M tokens, taxa de PICO (a mais cara) — ver docstring acima.
 const PRICING_PER_1M_PEAK = {
@@ -113,12 +149,13 @@ function saveState(state) {
 /** Chame ANTES de fazer a chamada de API — nunca gaste dinheiro real sem checar antes. */
 function checkBudget() {
   const state = loadState();
-  const remaining = Math.max(0, DAILY_CAP_USD - state.spent_usd);
+  const cap = loadCap();
+  const remaining = Math.max(0, cap - state.spent_usd);
   return {
     ok: remaining > 0.0005, // margem mínima pra não deixar passar uma chamada de custo ~0 que não vale a pena
     spent_usd: state.spent_usd,
     remaining_usd: remaining,
-    cap_usd: DAILY_CAP_USD,
+    cap_usd: cap,
   };
 }
 
@@ -146,6 +183,6 @@ function recordUsage(model, usage, agentId = 'desconhecido') {
 
 module.exports = {
   checkBudget, recordUsage, loadState, DAILY_CAP_USD, PRICING_PER_1M_PEAK, STATE_FILE,
-  isOffPeakNow,
+  isOffPeakNow, loadCap, setCap, CONFIG_FILE,
   offPeakPricingOf: _offPeakPricing, // exportado só pra teste determinístico da matemática de desconto
 };
