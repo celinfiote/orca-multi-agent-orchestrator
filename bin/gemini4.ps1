@@ -57,8 +57,16 @@ foreach ($arg in $rest) {
 }
 $modelArgs = if (-not $hasModelControl) { @("-m", "gemini-3.8-flash") } else { @() }
 
+# CORRIGIDO 2026-10-03 -- ver comentario completo em gemini2.ps1: Gemini CLI
+# restringe acesso de arquivo/shell SO ao worktree, e tentar trabalhar fora
+# dele (ex: celin-hub) gastava a cota em tentativas de contorno, nao na
+# tarefa em si. --include-directories libera a pasta extra sem trocar workspace.
+$extraDirs = @("C:\Users\Usuario\Documents\celin-hub")
+$includeDirArgs = @()
+foreach ($dir in $extraDirs) { $includeDirArgs += @("--include-directories", $dir) }
+
 if (-not $hasSessionControl) {
-    & $geminiExe --skip-trust --yolo @modelArgs -r latest @rest
+    & $geminiExe --skip-trust --yolo @modelArgs @includeDirArgs -r latest @rest
 } else {
-    & $geminiExe --skip-trust --yolo @modelArgs @rest
+    & $geminiExe --skip-trust --yolo @modelArgs @includeDirArgs @rest
 }

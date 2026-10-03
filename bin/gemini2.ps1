@@ -60,8 +60,22 @@ foreach ($arg in $rest) {
 }
 $modelArgs = if (-not $hasModelControl) { @("-m", "gemini-3.8-flash") } else { @() }
 
+# CORRIGIDO 2026-10-03 (achado real: usuario reportou "todos os gemini com
+# limite excedido" numa chave PAGA que deveria durar horas -- investigando o
+# log de erro real em %TEMP%\gemini-client-error-*.json, a causa nao era cota
+# de verdade: o Gemini CLI restringe acesso a arquivo/shell SO ao worktree
+# (helios-geminiN) + pasta temp do projeto. Toda tentativa de ler/editar um
+# projeto FORA do worktree (ex: C:\Users\Usuario\Documents\celin-hub) falhava
+# com "Path not in workspace", e o agente gastava dezenas de tool calls
+# tentando contornar via Get-Content/caminho absoluto -- isso sim esgotava a
+# cota rapido, nao o tamanho real da tarefa. --include-directories adiciona
+# uma pasta extra MOVE-AI permitida sem trocar o workspace principal.
+$extraDirs = @("C:\Users\Usuario\Documents\celin-hub")
+$includeDirArgs = @()
+foreach ($dir in $extraDirs) { $includeDirArgs += @("--include-directories", $dir) }
+
 if (-not $hasSessionControl) {
-    & $geminiExe --skip-trust --yolo @modelArgs -r latest @rest
+    & $geminiExe --skip-trust --yolo @modelArgs @includeDirArgs -r latest @rest
 } else {
-    & $geminiExe --skip-trust --yolo @modelArgs @rest
+    & $geminiExe --skip-trust --yolo @modelArgs @includeDirArgs @rest
 }
