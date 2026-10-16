@@ -33,12 +33,12 @@ async function isServerRunning() {
 function focusWindow() {
   const focusScript = path.join(__dirname, 'focus.ps1');
   if (fs.existsSync(focusScript)) {
-    exec(`powershell -ExecutionPolicy Bypass -File "${focusScript}"`, (err) => {
+    exec(`powershell -ExecutionPolicy Bypass -File "${focusScript}"`, { windowsHide: true }, (err) => {
       if (err) {
         // Fallback: direct Edge app launch
         const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
         if (fs.existsSync(edgePath)) {
-          spawn(edgePath, [`--app=http://localhost:${PORT}`], { detached: true, stdio: 'ignore' }).unref();
+          spawn(edgePath, [`--app=http://localhost:${PORT}`], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
         }
       }
     });
@@ -50,7 +50,7 @@ function startServerInBackground() {
   const child = spawn(process.execPath, [serverPath, '--open'], {
     detached: true,
     stdio: 'ignore',
-    windowsHide: false
+    windowsHide: true
   });
   child.unref();
 }

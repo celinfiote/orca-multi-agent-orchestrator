@@ -32,7 +32,7 @@ const WORKTREES = buildWorktrees();
 
 function runCmd(cmd, cwd = WORKTREES.gemini2) {
   try {
-    return execSync(cmd, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    return execSync(cmd, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true }).trim();
   } catch (e) {
     return (e.stdout || e.stderr || e.message || '').toString().trim();
   }

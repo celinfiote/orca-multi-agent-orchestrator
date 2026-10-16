@@ -196,7 +196,7 @@ function loadClusterState() {
 
       if (pathname === '/api/open-in-explorer') {
         if (data.filePath && fs.existsSync(data.filePath)) {
-          exec(`explorer.exe /select,"${data.filePath}"`);
+          exec(`explorer.exe /select,"${data.filePath}"`, { windowsHide: true });
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
         } else {
@@ -273,9 +273,9 @@ function launchAppWindow() {
       '--disable-features=Translate',
       '--disable-extensions'
     ];
-    spawn(edgePath, args, { detached: true, stdio: 'ignore' }).unref();
+    spawn(edgePath, args, { detached: true, stdio: 'ignore', windowsHide: true }).unref();
   } else {
-    exec(`start ${urlToOpen}`);
+    exec(`start ${urlToOpen}`, { windowsHide: true });
   }
 }
 

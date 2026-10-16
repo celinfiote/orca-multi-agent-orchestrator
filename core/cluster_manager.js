@@ -75,6 +75,11 @@ function buildWorktreeMatchers() {
   return map;
 }
 
+function isOrcaAvailable() {
+  const runtimePath = path.join(process.env.APPDATA || '', 'orca', 'orca-runtime.json');
+  return fs.existsSync(runtimePath);
+}
+
 /**
  * Lê o estado REAL de cada terminal via `orca terminal list`/`terminal read` e detecta
  * exaustão de cota por regex no output de verdade — não é uma suposição, é o que está
@@ -83,8 +88,9 @@ function buildWorktreeMatchers() {
  * em vez de uma lista hardcoded.
  */
 function getActiveTerminalDetails() {
+  if (!isOrcaAvailable()) return {};
   try {
-    const raw = execSync('orca terminal list --json', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const raw = execSync('orca terminal list --json', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     const parsed = JSON.parse(raw);
     const terminals = parsed.result?.terminals || [];
     const worktreeMatchers = buildWorktreeMatchers();
@@ -100,7 +106,7 @@ function getActiveTerminalDetails() {
 
       let fullOutput = t.preview || '';
       try {
-        const readRaw = execSync(`orca terminal read --terminal ${t.handle} --limit 35 --json`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+        const readRaw = execSync(`orca terminal read --terminal ${t.handle} --limit 35 --json`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
         const readParsed = JSON.parse(readRaw);
         const tail = readParsed.result?.terminal?.tail || [];
         const systemLines = tail.filter(l => {
@@ -327,7 +333,7 @@ function broadcastLivePreview(title, description, agent = 'global') {
   try {
     const showJs = 'C:\\Users\\Usuario\\Documents\\orca-live-preview\\show.js';
     if (fs.existsSync(showJs)) {
-      execSync(`node "${showJs}" --status "${title}" "${description}" --agent ${agent}`, { stdio: 'ignore' });
+      execSync(`node "${showJs}" --status "${title}" "${description}" --agent ${agent}`, { stdio: 'ignore', windowsHide: true });
     }
   } catch (e) {}
 }
@@ -350,7 +356,7 @@ function sendToTerminal(agentKey, text) {
   }
   try {
     const cleanText = text.replace(/"/g, '\\"');
-    execSync(`orca terminal send --terminal ${handle} --text "${cleanText}" --enter --json`, { stdio: 'ignore' });
+    execSync(`orca terminal send --terminal ${handle} --text "${cleanText}" --enter --json`, { stdio: 'ignore', windowsHide: true });
     console.log(`📡 [Despacho IPC] Enviado com sucesso para ${agentKey.toUpperCase()} (${handle})`);
     return true;
   } catch (e) {
@@ -525,5 +531,5 @@ if (require.main === module) {
 
 module.exports = {
   loadState, saveState, sendToTerminal, getActiveTerminalDetails, auditAndSyncClusterState,
-  broadcastLivePreview, PRIORITY_QUEUE, STATE_FILE
+  broadcastLivePreview, PRIORITY_QUEUE, STATE_FILE, isOrcaAvailable
 };

@@ -32,7 +32,7 @@ function checkMeshResources() {
 
   for (const [label, cmd] of [['ImageMagick 7 (magick)', 'magick'], ['Python (Sobel normal maps)', 'python']]) {
     try {
-      execSync(`where ${cmd}`, { stdio: ['ignore', 'ignore', 'ignore'] });
+      execSync(`where ${cmd}`, { stdio: ['ignore', 'ignore', 'ignore'], windowsHide: true });
       results.push({ name: label, ok: true, info: `'${cmd}' encontrado no PATH` });
     } catch (e) {
       results.push({ name: label, ok: false, info: `'${cmd}' NÃO encontrado no PATH` });

@@ -1,15 +1,21 @@
 ---
-description: "Protocolo de Comunicação Obrigatório para os Agentes Gemini (Gemini 1 e Gemini 2) no HELIOS."
+description: "Protocolo de Comunicação Obrigatório para todos os 6 Agentes do HELIOS."
 trigger: "always_on"
 ---
 
-# 💬 Protocolo Permanente de Comunicação dos Agentes Gemini (Gemini 1 e Gemini 2)
+# 💬 Protocolo Permanente de Comunicação dos 6 Agentes do HELIOS
+
+> ⚠️ **CORREÇÃO (2026-08-28)**: este arquivo dizia se aplicar só a "Gemini 1 e Gemini 2", mas
+> o conteúdo abaixo (termos técnicos entre parênteses, links clicáveis, sem processo em
+> background, horário da próxima checagem) sempre foi a regra universal já documentada em
+> `CLAUDE.md` seção 12/15 pra todos os 6 agentes — o escopo estava errado, não o conteúdo.
 
 > **DIRETRIZ OBRIGATÓRIA**:
-> Sempre que o Gemini 1 ou o Gemini 2 responder ao usuário, a mensagem DEVE seguir este formato:
-> 1. **Resumida e Direta**: Objetiva, sem enrolação e focada no resultado prático.
-> 2. **Altamente Organizada**: Uso de tópicos claros, tabelas visuais e passos sequenciais.
-> 3. **Linguagem Técnica Explicada Entre Parênteses `( )`**: Toda terminologia técnica, de programação, de motor ou de rede DEVE conter uma explicação simples e compreensível logo ao lado entre parênteses `( )`.
+> Sempre que qualquer um dos agentes (Gemini 1, Gemini 2, Gemini 3, Gemini 4, Claude Code, DeepSeek) responder ao usuário, a mensagem DEVE seguir este formato:
+> 1. **Idioma Estritamente em Português do Brasil (pt-BR)**: Toda e qualquer resposta, explicação, resumo, plano, relatório, comentário e interação DEVE ser realizada obrigatoriamente em **Português do Brasil (pt-BR)**. É expressamente proibido responder em inglês ou misturar idiomas sem necessidade, mesmo que mensagens do sistema, logs ou chamadas de ferramentas estejam em inglês.
+> 2. **Resumida e Direta**: Objetiva, sem enrolação e focada no resultado prático.
+> 3. **Altamente Organizada**: Uso de tópicos claros, tabelas visuais e passos sequenciais.
+> 4. **Linguagem Técnica Explicada Entre Parênteses `( )`**: Toda terminologia técnica, de programação, de motor ou de rede DEVE conter uma explicação simples e compreensível logo ao lado entre parênteses `( )`.
 
 ---
 
@@ -32,5 +38,6 @@ trigger: "always_on"
 Sempre que qualquer agente corrigir um bug visual, de gameplay ou de física apontado pelo usuário:
 1. **Gerar ou Atualizar Scripts Executáveis `.bat`**: Manter `launch_game.bat` (jogo completo) e `launch_<cenateste>.bat` na raiz do worktree.
 2. **NUNCA Manter Processo Interativo Rodando em Segundo Plano no Terminal**: Jamais deixar a janela do jogo rodando como background task no terminal do agente, pois isso trava o status da IA em "running" no Orca.
-3. **Fornecer SEMPRE o Link Clicável do Jogo Completo (`launch_game.bat`) e do Teste Específico**: Apresentar SEMPRE os links diretos para o inicializador do jogo completo ([`launch_game.bat`](file:///C:/Users/Usuario/Documents/helios-gemini2/launch_game.bat)), para o lançador de teste da entrega (`launch_<cenateste>.bat`) e para a pasta do worktree `file:///C:/Users/Usuario/Documents/helios-.../` para que o usuário execute e teste o jogo completo com duplo clique no Windows Explorer com total facilidade e autonomia.
+3. **Fornecer SEMPRE o Link Clicável do Jogo Completo em `main` (`launch_game.bat`) e do Teste Específico**: Apresentar SEMPRE os links diretos para o inicializador do jogo completo da pasta **`main`** ([`launch_game.bat`](file:///C:/Users/Usuario/Documents/helios/launch_game.bat)), para o lançador de teste da entrega (`launch_<cenateste>.bat` **no worktree do próprio agente que respondeu**, nunca hardcoded pro worktree de outro agente) e para a pasta do worktree `file:///C:/Users/Usuario/Documents/helios-.../` para que o usuário execute e teste o jogo completo com duplo clique no Windows Explorer com total facilidade e autonomia.
 4. **Exibição Obrigatória do Horário da Próxima Checagem em Modo de Espera / Watchdog**: Sempre que o Backlog do Linear estiver zerado (0 tarefas abertas) e o watchdog de 10 minutos (temporizador de polling contínuo) estiver ativo, a resposta DEVE OBRIGATORIAMENTE incluir logo abaixo do status do watchdog o horário exato (calculado a partir do horário local atual, ex: `• Próxima Checagem Agendada: HH:MM:SS (Horário Local)`) em que o sistema realizará a próxima busca por tarefas no Linear.
+5. **Exibição Obrigatória de APIs, CLIs e Ferramentas em Uso**: Em toda resposta e ação executada, relatar explicitamente qual API ou CLI foi acionada (ex: DeepSeek V3 API, Groq Cloud API, PixelLab API, ImageMagick CLI, Python Sobel, Godot Console, Linear API, Git CLI, Orca Terminal API) e exatamente o que ela processou.
